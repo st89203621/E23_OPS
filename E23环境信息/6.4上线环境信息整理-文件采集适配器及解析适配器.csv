@@ -1,0 +1,251 @@
+﻿局点,hostname,ip,环境信息,对接设备IP（NFS或者FTP）,对接设备目录地址,,,
+MC（A-1）,rm-dca-s1（mobileradius，M运营商）,192.168.13.75,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping/bin/stop.sh
+侦听目录：/data/semptian/data/mobile",,,,,
+MC（A-1）,rm-dca-s1（mobileradius，O运营商）,192.168.13.75,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping_ooredoo
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping_ooredoo/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping_ooredoo/bin/stop.sh
+侦听目录：/data/semptian/data/ooredoo_mobile",,,,,
+MC（A-1）,rm-dca-s1（mobileradius，D运营商）,192.168.13.75,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping_dz
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping_dz/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-mobileradiusmapping_dz/bin/stop.sh
+侦听目录：/data/semptian/data/dz_mobile",,,,,
+MC（A-1）,rm-dca-s1（radius）,192.168.13.75,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-radiusmapping
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-radiusmapping/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-radiusmapping/bin/stop.sh
+侦听目录：/data/semptian/data/fixed",,,,,
+MC（A-1）,svm-dca-s1（fax）,192.168.13.76,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-fax
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-fax/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-fax/bin/stop.sh
+侦听目录：/data/semptian/data/fax/",,,,,
+MC（A-1）,svm-dca-s1（voip-call）,192.168.13.76,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-callvoip
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-callvoip/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-callvoip/bin/stop.sh
+侦听目录：/data/semptian/data/voip-call",,,,,
+MC（A-1）,svm-dca-s1（voip容灾-fax）,192.168.13.76,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-fax/
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-fax/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-fax/bin/stop.sh
+侦听目录：/data/semptian/data_dr/fax",,,,,
+MC（A-1）,svm-dca-s1（voip容灾-voip-call）,192.168.13.76,"部署路径：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-callvoip
+启动路径：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-callvoip/bin/start.sh
+停止命令：sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-callvoip/bin/stop.sh
+侦听目录：/data/semptian/data_dr/voip-call",,,,,
+MC（A-1）,"a1nf-atdca-s1到a1nf-atdca-s5
+NF行为和安全日志采集适配器+压缩服务+解析服务","192.168.13.54到
+192.168.13.58","部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"dpa-b1nf-s1到dpa-b1nf-s2
+B1局点NF解析适配器",192.168.13.54、192.168.13.55,"部署路径：/data/semptian/nf
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-statics/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-statics/bin/stop.sh
+侦听目录：
+/data1/ftp/nf/action、/data1/ftp/nf/statics",,,,,
+MC（A-1）,"a1nf-atdca-s1到a1nf-atdca-s5
+NF行为和安全日志采集适配器+压缩服务+解析服务",192.168.13.55,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-statics/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-statics/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"dpa-c1nf-s1到dpa-c1nf-s2
+C1局点NF解析适配器",192.168.13.56、192.168.13.57,"部署路径：/data/semptian/nf
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-statics/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11-nf-statics/bin/stop.sh
+侦听目录：
+/data1/ftp/nf/action、/data1/ftp/nf/statics",,,,,
+MC（A-1）,"a1nf-atdca-s1到a1nf-atdca-s5
+NF行为和安全日志采集适配器+压缩服务+解析服务",192.168.13.57,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-statics/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-statics/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-nf-action/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-atdca-s1到a1nf-atdca-s5
+NF行为和安全日志采集适配器+压缩服务+解析服务",192.168.13.58,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-stdca-s1到a1nf-stdca-s5
+NF统计日志采集适配器+压缩服务+解析服务",192.168.13.59,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-stdca-s1到a1nf-stdca-s5
+NF统计日志采集适配器+压缩服务+解析服务",192.168.13.60,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-radiusmapping/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-radiusmapping/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-stdca-s1到a1nf-stdca-s5
+NF统计日志采集适配器+压缩服务+解析服务",192.168.13.61,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-stdca-s1到a1nf-stdca-s5
+NF统计日志采集适配器+压缩服务+解析服务",192.168.13.62,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-dca-s1到a1nf-dca-s8
+NF日志采集适配器+压缩服务+解析服务","192.168.13.58至192.168.13.65（
+192.168.13.58、59、60、61、62、63、64、65）","部署路径：/data/semptian/nf
+启动路径：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/start.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/start.sh
+停止命令：
+sh /data/semptian/nf/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-adapter-v6.2.3.20/bin/stop.sh
+sh /data/semptian/nf/deye-dataprotocol-file-analysis-v6.2.3.11/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-stdca-s1到a1nf-stdca-s5
+NF统计日志采集适配器+压缩服务+解析服务","192.168.13.59到
+192.168.13.63","部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-statistic/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-nf-statistic/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-statistic/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-statistic/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11-nf-statistic/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-statistic/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log",,,,,
+MC（A-1）,"a1nf-tgtdca-s1
+NF特定目标采集适配器",192.168.13.77,"部署目录：/data/semptian/deye-nf-adapter-v6.2.3r0.1.5/
+启动命令：sh /data/semptian/deye-nf-adapter-v6.2.3r0.1.5/bin/start.sh
+停止命令：sh /data/semptian/deye-nf-adapter-v6.2.3r0.1.5/bin/stop.sh",,,,,
+MC（A-1）,,192.168.13.77,"部署目录：/data/semptian/deye-nf-rules-v6.2.3r0.1.1
+启动命令：sh /data/semptian/deye-nf-rules-v6.2.3r0.1.1/bin/start.sh
+停止命令：sh /data/semptian/deye-nf-rules-v6.2.3r0.1.1/bin/stop.sh",,,,,
+MC（A-1）,,192.168.13.77,"部署目录：/data/semptian/deye-nf-agent-v6.2.3r0.1.6
+启动命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/start.sh
+停止命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/stop.sh",,,,,
+MC（A-1）,NF特定目标nf-agent,192.168.13.25,"部署目录：/data/semptian/deye-nf-agent-v6.2.3r0.1.6
+启动命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/start.sh
+停止命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/stop.sh",,,,,
+Anaba（B1）,NF特定目标nf-agent,192.168.54.35,"部署目录：/data/semptian/deye-nf-agent-v6.2.3r0.1.6
+启动命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/start.sh
+停止命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/stop.sh",,,,,
+Oran（C1）,NF特定目标nf-agent,192.168.94.23,"部署目录：/data/semptian/deye-nf-agent-v6.2.3r0.1.6
+启动命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/start.sh
+停止命令：sh /data/semptian/deye-nf-agent-v6.2.3r0.1.6/bin/stop.sh",,,,,
+MC（A-1）,dpa-b1pr-s1,192.168.13.26,"部署目录：/data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11/
+侦听目录：/data1/ftp/pr/",,,,,
+MC（A-1）,dpa-b1pr-s2,192.168.13.27,"部署目录：/data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11/
+侦听目录：/data1/ftp/pr/",,,,,
+MC（A-1）,dpa-c1pr-s1,192.168.13.28,"部署目录：/data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11/
+侦听目录：/data1/ftp/pr/",,,,,
+MC（A-1）,dpa-c1pr-s2,192.168.13.29,"部署目录：/data/semptian/deye-dataprotocol-file-analysis-v6.2.3.11/
+侦听目录：/data1/ftp/pr/",,,,,
+Anaba（B1）,"b1nf-atdca-s1到b1nf-atdca-s7
+NF行为和安全日志采集适配器+压缩服务+摆渡服务",192.168.54.21到192.168.54.27,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-action/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-action/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-action/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-action/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log","192.168.54.55(21-24)
+192.168.54.56(25-27)",/data/pr-collect/analysis/zip,,,
+Anaba（B1）,"b1nf-stdca-s1到b1nf-stdca-s7
+NF统计日志采集适配器+压缩服务+摆渡服务",192.168.54.28到192.168.54.34,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-statistic/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-statistic/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-statistic/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-statistic/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log","192.168.54.57(28-31)
+192.168.54.59(32-34)",/data/pr-collect/analysis/zip,,,
+Oran（C1）,"c1nf-atdca-s1到c1nf-atdca-s5
+NF行为和安全日志采集适配器+压缩服务+摆渡服务",192.168.94.13到192.168.94.17,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-action/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-action/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-action/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-action/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log","192.168.94.47
+192.168.94.48","/data/pr-collect/analysis/zip
+/data/pr-collect/analysis/zip/action",,,
+Oran（C1）,"c1nf-stdca-s1到c1nf-stdca-s5
+NF统计日志采集适配器+压缩服务+摆渡服务",192.168.94.18到192.168.54.22,"部署路径：/data/semptian/
+启动路径：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-statistic/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-statistic/bin/start.sh
+停止命令：
+sh /data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-nf-statistic/bin/stop.sh
+sh /data/semptian/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+sh /data/semptian/deye-dataprotocol-file-compress-v6.2.3.6-nf-statistic/bin/stop.sh
+侦听目录：/data/semptian/data/dc_log","192.168.94.48
+192.168.94.50","/data/pr-collect/analysis/zip/statistic
+/data/pr-collect/analysis/zip",,,

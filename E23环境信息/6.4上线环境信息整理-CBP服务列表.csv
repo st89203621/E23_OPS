@@ -1,0 +1,334 @@
+﻿类型,应用,地址信息,备注,,,,,,,,,,,,,,,,,,,,,,,
+公共组件,nacos,http://192.168.13.10:8848/nacos     没有密码,"部署目录：/data1/semptian/service/nacos
+启动命令：./data1/semptian/service/nacos/bin/startup.sh  -m standalone
+关闭命令： ./data1/semptian/service/nacos/bin/shutdown.sh",,,,,,,,,,,,,,,,,,,,,,,
+,"文件服务
+",192.168.13.10:9100/filecenter," 部署目录：/data1/semptian/service/deye-common-filecenter-v6.4.0.1
+启动命令：sh /data1/semptian/service/deye-common-filecenter-v6.4.0.1/bin/start.sh
+关闭命令：sh  /data1/semptian/service/deye-common-filecenter-v6.4.0.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,"消息服务
+",192.168.13.10:9200/message," 部署目录：/data1/semptian/service/deye-common-message-v6.4.4
+启动命令：sh /data1/semptian/service/deye-common-message-v6.4.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-common-message-v6.4.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,代理服务,192.168.13.10:8099," 部署目录：/data1/semptian/service/deye-common-proxy-v6.4.0.1
+启动命令：sh /data1/semptian/service/deye-common-proxy-v6.4.0.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-common-proxy-v6.4.0.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,调度中心,http://192.168.13.6:9080/job-admin     admin/123456," 部署目录：/data1/semptian/service/de-job-admin-6.4.0
+启动命令：sh /data1/semptian/service/de-job-admin-6.4.0/bin/start.sh
+关闭命令：sh /data1/semptian/service/de-job-admin-6.4.0/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,调度中心执行器,192.168.13.6:9997," 部署目录：/data1/semptian/service/deye-common-job-executor-6.4.0
+启动命令：sh /data1/semptian/service/deye-common-job-executor-6.4.0/bin/start.sh
+关闭命令:  sh /data1/semptian/service/deye-common-job-executor-6.4.0/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,文件预览服务,http://192.168.13.10:8012/," 部署目录：/data1/semptian/service/kkFileView-4.3.0
+启动命令：./data1/semptian/service/kkFileView-4.3.0/bin/startup.sh
+关闭命令：./data1/semptian/service/kkFileView-4.3.0/bin/shutdown.sh",,,,,,,,,,,,,,,,,,,,,,,
+,nginx,"ip:  192.168.13.10
+NF信息中心使用：192.168.13.13-17"," 部署目录：/opt/nginx-1.10.3
+启动命令：systemctl start nginx
+关闭命令：systemctl stop nginx
+配置文件重新加载：systemctl reload nginx",,,,,,,,,,,,,,,,,,,,,,,
+,资源库服务,192.168.13.10:8866," 部署目录：/data1/semptian/service/deye-resource-web-v6.4.0.0
+启动命令：sh /data1/semptian/service/deye-resource-web-v6.4.0.0/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-resource-web-v6.4.0.0/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,播放器,192.168.13.10:8080/de-audio-player," 部署目录：/data1/semptian/service/deye-audio-player-v6.4.6.02
+启动命令：sh /data1/semptian/service/deye-audio-player-v6.4.6.02/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-audio-player-v6.4.6.02/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,维度服务,192.168.13.10:8055/ads_dimension," 部署目录：/data1/semptian/service/deye-ads-dimension-web-v6.4.0.1
+启动命令：sh /data1/semptian/service/deye-ads-dimension-web-v6.4.0.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-ads-dimension-web-v6.4.0.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,网关,192.168.13.10:8040," 部署目录：/data1/semptian/service/deye-common-zuul-v6.4
+启动命令：sh /data1/semptian/service/deye-common-zuul-v6.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-common-zuul-v6.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,日志服务,192.168.13.9:9300/log," 部署目录：/data1/semptian/service/deye-common-log-v6.4.0.1
+启动命令：sh /data1/semptian/service/deye-common-log-v6.4.0.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-common-log-v6.4.0.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+综合搜索,综合搜索web,192.168.13.7:8089/search-web," 部署目录：/data1/semptian/service/deye-search-web-v6.4.1.01
+启动命令：sh /data1/semptian/service/deye-search-web-v6.4.1.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-search-web-v6.4.1.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,搜索kernel,192.168.13.7:8077/search_kernel," 部署目录：/data1/semptian/service/deye-search-kernel-web-v7.15.2.15
+启动命令：sh /data1/semptian/service/deye-search-kernel-web-v7.15.2.15/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-search-kernel-web-v7.15.2.15/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,综合搜索前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+案件系统,案件入库,192.168.13.8:9501/," 部署目录：/data1/semptian/service/deye-case-dataload-v6.4.6.02
+启动命令：sh /data1/semptian/service/deye-case-dataload-v6.4.6.02/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-case-dataload-v6.4.6.02/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,CRS服务,192.168.13.8:9097," 部署目录：/data1/semptian/service/deye-crs-v6.4.6.02
+启动命令：sh /data1/semptian/service/deye-crs-v6.4.6.02/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-crs-v6.4.6.02/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,规则监控,192.168.13.8:9500," 部署目录：/data1/semptian/service/deye-case-rulemonitor-v6.4.6.01
+启动命令：sh /data1/semptian/service/deye-case-rulemonitor-v6.4.6.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-case-rulemonitor-v6.4.6.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,NF系统,192.168.13.8:9999/nfsystem," 部署目录：/data1/semptian/service/deye-nfsystem-web-v6.4.8
+启动命令：sh /data1/semptian/service/deye-nfsystem-web-v6.4.8/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-nfsystem-web-v6.4.8/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,案件web,192.168.13.8:8088/case-system," 部署目录：/data1/semptian/service/deye-case-web-v6.4.6.02
+启动命令：sh /data1/semptian/service/deye-case-web-v6.4.6.02/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-case-web-v6.4.6.02/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,案件前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+,vrs-system,192.168.13.8:8087/vrs-system," 部署目录：/data1/semptian/service/deye-vrs-web-v6.4.6
+启动命令：sh /data1/semptian/service/deye-vrs-web-v6.4.6/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-vrs-web-v6.4.6/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,DCL服务,192.168.13.8,,,,,,,,,,,,,,,,,,,,,,,,
+全息档案,全息档案web,192.168.13.8:8189/archives_web," 部署目录：/data1/semptian/service/deye-archives-web-v6.4.3
+启动命令：sh /data1/semptian/service/deye-archives-web-v6.4.3/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-archives-web-v6.4.3/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,机主信息,192.168.13.12,/semptian/service/bart-relation-api,,,,,,,,,,,,,,,,,,,,,,,
+,机主信息web端,192.168.13.8,/data1/semptian/service/deye-owner-info-analyze-v6.4.1,,,,,,,,,,,,,,,,,,,,,,,
+,全息档案前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+线索侦查,线索侦查web,192.168.13.7:8181/clue_scout," 部署目录：/data1/semptian/service/deye-clue-scout-web-1.0-SNAPSHOT
+启动命令：sh /data1/semptian/service/deye-clue-scout-web-1.0-SNAPSHOT/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-clue-scout-web-1.0-SNAPSHOT/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,线索侦查job,192.168.13.7:8185/clue_scout_job," 部署目录：/data1/semptian/service/deye-clue-scout-job-v6.4.1.01
+启动命令：sh /data1/semptian/service/deye-clue-scout-job-v6.4.1.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-clue-scout-job-v6.4.1.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,推荐web,192.168.13.7:8180," 部署目录：/data1/semptian/service/deye-recommend-web-v6.4.1.01
+启动命令：sh /data1/semptian/service/deye-recommend-web-v6.4.1.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-recommend-web-v6.4.1.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,推荐engine,192.168.13.7:8183," 部署目录：/data1/semptian/service/deye-recommend-engine-v6.4.1.01
+启动命令：sh /data1/semptian/service/deye-recommend-engine-v6.4.1.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-recommend-engine-v6.4.1.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,线索前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+网管系统,本地监控服务,, 部署目录：/semptian/net-management/monitor-local,,,,,,,,,,,,,,,,,,,,,,,
+,远程监控服务,192.168.13.9:8847/net_monitor_remote," 部署目录：/data1/semptian/service/deye-nms-monitor-remote-v6.4
+启动命令：sh /data1/semptian/service/deye-nms-monitor-remote-v6.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-nms-monitor-remote-v6.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,监控入库服务,192.168.13.9:8857/net_monitor_load," 部署目录：/data1/semptian/service/deye-nms-monitor-load-v6.4
+启动命令：sh /data1/semptian/service/deye-nms-monitor-load-v6.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-nms-monitor-load-v6.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,告警服务,192.168.13.9:8837/net_alarm," 部署目录：/data1/semptian/service/deye-nms-alarm-v6.4
+启动命令：sh /data1/semptian/service/deye-nms-alarm-v6.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-nms-alarm-v6.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,网管web,192.168.13.9:8867/net_management," 部署目录：/data1/semptian/service/deye-nms-web-v6.4
+启动命令：sh /data1/semptian/service/deye-nms-web-v6.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-nms-web-v6.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,网管前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+NF信息中心,后端,192.168.13.8:8085/nf-info-center," 部署目录：/data1/semptian/service/deye-nf-info-center-v6.4.8
+启动命令：sh /data1/semptian/service/deye-nf-info-center-v6.4.8/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-nf-info-center-v6.4.8/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+数字资产大屏,数字资产大屏后端,192.168.13.7," 部署目录：/data1/semptian/service/deye-net-management-screen-web-v6.4.8.01
+启动命令：sh /data1/semptian/service/deye-net-management-screen-web-v6.4.8.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-net-management-screen-web-v6.4.8.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,数字资产大屏前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+门户,门户web,"192.168.13.9:8090
+CBP登录url：http://192.168.13.10:8104/#/home    "," 部署目录：/data1/semptian/service/deye-portal-system-v6.2.2.f
+启动命令：sh /data1/semptian/service/deye-portal-system-v6.2.2.f/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-portal-system-v6.2.2.f/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,门户前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+,权限中心,192.168.13.9:8199/permission," 部署目录：/data1/semptian/service/deye-permission-center-v6.2.2.e
+启动命令：sh /data1/semptian/service/deye-permission-center-v6.2.2.e/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-permission-center-v6.2.2.e/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+基础库,基础库web,192.168.13.8:8098/basic_library," 部署目录：/data1/semptian/service/deye-basic-web-v6.4.0.1_B04
+启动命令：sh /data1/semptian/service/deye-basic-web-v6.4.0.1_B04/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-basic-web-v6.4.0.1_B04/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,基础库前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+安全检测,安全检测web,192.168.13.8:8868/security_detection," 部署目录：/data1/semptian/service/deye-network-security-detection-v6.4.b05P02
+启动命令：sh /data1/semptian/service/deye-network-security-detection-v6.4.b05P02/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-network-security-detection-v6.4.b05P02/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,安全检测前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+DDoS,后端,192.168.13.8," 部署目录：/data1/semptian/service/deye-threat-identification-web-v6.4.0.1
+启动命令：sh /data1/semptian/service/deye-threat-identification-web-v6.4.0.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-threat-identification-web-v6.4.0.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,规则中心,192.168.13.8," 部署目录：/data1/semptian/service/deye-rule-center-service-v6.4.6.1
+启动命令：sh /data1/semptian/service/deye-rule-center-service-v6.4.6.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-rule-center-service-v6.4.6.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+报表中心,报表中心web,192.168.13.9:8093/report," 部署目录：/data1/semptian/service/deye-report-web-v6.4
+启动命令：sh /data1/semptian/service/deye-report-web-v6.4/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-report-web-v6.4/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,报表中心前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+,达芬奇报表引擎,192.168.13.9:10086/," 部署目录：/data1/semptian/service/deye-bi-report-element
+启动命令：sh /data1/semptian/service/deye-bi-report-element/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-bi-report-element/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+群组挖掘,群组挖掘web,192.168.13.7:8092/community_dig," 部署目录：/data1/semptian/service/deye-community-dig-web-v6.4.8.2
+启动命令：sh /data1/semptian/service/deye-community-dig-web-v6.4.8.2/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-community-dig-web-v6.4.8.2/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,群组挖掘job,192.168.13.7:8899/community_dig," 部署目录：/data1/semptian/service/deye-community-dig-job-v6.4.8.2
+启动命令：sh /data1/semptian/service/deye-community-dig-job-v6.4.8.2/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-community-dig-job-v6.4.8.2/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,群组挖掘前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+统计分析,统计分析web,192.168.13.9:8092/statistical_analysis," 部署目录：/data1/semptian/service/deye-analysis-web-v6.4.1.1
+启动命令：sh /data1/semptian/service/deye-analysis-web-v6.4.1.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-analysis-web-v6.4.1.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,统计分析前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+GK专题,GK专题前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+,目标提取web,192.168.13.9:8218/target_subject," 部署目录：/data1/semptian/service/deye-target-subject-web-v6.4.9
+启动命令：sh /data1/semptian/service/deye-target-subject-web-v6.4.9/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-target-subject-web-v6.4.9/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,GK专题web,192.168.13.7:8868/security_detection," 部署目录：/data1/semptian/service/deye-examination-subject-web-6.4.0.1
+启动命令：sh /data1/semptian/service/deye-examination-subject-web-6.4.0.1/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-examination-subject-web-6.4.0.1/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+AI服务,nginx,192.168.13.30（8022端口对应银行、高频词和航班服务；5114端口对应垃圾邮件online_training服务）," 部署目录：/opt/nginx-1.10.2
+启动命令：systemctl start nginx
+关闭命令：systemctl stop nginx
+配置文件重新加载：systemctl reload nginx",,,,,,,,,,,,,,,,,,,,,,,
+,垃圾邮件识别-在线训练,"192.168.13.30-31(online:5214, algorithm:5113)","部署目录：/data1/semptian/service/ai-v6.4
+启动命令：/data1/semptian/service/deye-spam-email-online-training-v6.2.3.4-assembly/bin/start.sh']
+关闭命令：/data1/semptian/service/deye-spam-email-online-training-v6.2.3.4-assembly/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,垃圾邮件识别-算法,"192.168.13.30-31(online:5214, algorithm:5113)","部署目录：/data1/semptian/service/ai-v6.4
+启动命令：/data1/semptian/service/deye-spam-email-algorithm-v6.2.3.7-assembly/bin/start.sh
+关闭命令：/data1/semptian/service/deye-spam-email-algorithm-v6.2.3.7-assembly/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,银行短信识别,192.168.13.30-31:9025，192.168.13.11,"部署目录：/data1/semptian/service/ai-6.4
+查看命令：docker ps -a
+关闭命令：docker ps -q | xargs -r docker stop
+启动命令：docker ps -a -q | xargs -r docker start
+重启命令：docker ps -a -q | xargs -r docker restart",,,,,,,,,,,,,,,,,,,,,,,
+,高频词服务,192.168.13.30-31:9026，192.168.13.11,,,,,,,,,,,,,,,,,,,,,,,,
+,航班信息识别,192.168.13.30-31:9023，192.168.13.11,,,,,,,,,,,,,,,,,,,,,,,,
+运维监控,dataEase,192.168.13.8,"url:http://192.168.13.8:8100/#/data/datasource               admin/DataEase@123456
+部署目录：/data1/semptian/service/dataease/dataease2.0
+dataease-mysql：192.168.13.8     root/123456",,,,,,,,,,,,,,,,,,,,,,,
+,python,192.168.13.8,部署目录：/semptian/service-6.4/deye-ops-python/,,,,,,,,,,,,,,,,,,,,,,,
+,运维监控后端,192.168.13.8,部署目录：/data1/semptian/service/deye-ops-web-v6.4.0.2,,,,,,,,,,,,,,,,,,,,,,,
+,运维监控前端,192.168.13.10,部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+,调度中心,192.168.13.8,"部署目录：/data1/semptian/service/deye-ops-job-admin-6.4.0
+登录地址： http://192.168.13.8:9081/job-admin/",,,,,,,,,,,,,,,,,,,,,,,
+,调度中心执行器,192.168.13.8,部署目录：/data1/semptian/service/deye-ops-job-executor-6.4.0,,,,,,,,,,,,,,,,,,,,,,,
+,登录地址,http://192.168.13.10:6062/#/home,user1/123456,,,,,,,,,,,,,,,,,,,,,,,
+上线测试用例,测试用例,192.168.13.6,测试用例目录:/data2/version/test_case,,,,,,,,,,,,,,,,,,,,,,,
+VoIP数据恢复应用,前端,192.168.13.10, 部署目录：/semptian/web,,,,,,,,,,,,,,,,,,,,,,,
+,VoIP数据恢复应用web,192.168.13.7:9866/voip-data-recovery," 部署目录：/data1/semptian/service/deye-voip-data-recovery-v6.4.9.01
+启动命令：sh /data1/semptian/service/deye-voip-data-recovery-v6.4.9.01/bin/start.sh
+关闭命令：sh /data1/semptian/service/deye-voip-data-recovery-v6.4.9.01/bin/stop.sh",,,,,,,,,,,,,,,,,,,,,,,
+,采集适配器【测试用】,192.168.13.76,"3.3 VoIP通话采集适配器，修改topicPefix: deye_ods_voip_dr_test，路径为：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-callvoip
+	3.4 VoIP传真采集适配器，修改topicPefix: deye_ods_voip_fax_dr_test，路径为：/data/semptian/deye-dataprotocol-file-adapter-v6.2.3.20-dr-fax/",,,,,,,,,,,,,,,,,,,,,,,
+,案件入库【测试用】,192.168.13.25,/data/semptian/deye-case-dataload-v6.4.6.02,,,,,,,,,,,,,,,,,,,,,,,
+,案件补录程序,192.168.13.25," 部署目录：/data/semptian/deye-case-hit-data-supplement-v6.4.9.02
+启动命令：sh /data/semptian/deye-case-hit-data-supplement-v6.4.9.02/bin/start.sh
+关闭命令：sh /data/semptian/deye-case-hit-data-supplement-v6.4.9.02/bin/stop.sh
+NFS挂载命令：
+mount -t nfs 192.168.8.55:/voice /voice
+mount -t nfs 192.168.8.58:/data/phone/mass4case/csv/call /data/semptian/data/chds/csv/call
+mount -t nfs 192.168.8.58:/data/phone/mass4case/csv/fax /data/semptian/data/chds/csv/fax",,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,

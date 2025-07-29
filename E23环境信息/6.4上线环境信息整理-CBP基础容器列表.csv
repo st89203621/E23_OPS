@@ -1,0 +1,100 @@
+﻿应用,地址信息,备注
+mysql,192.168.13.4:3306   root/123456,"部署目录： /usr/local/mysql
+配置文件目录：/etc/mysql/mysql.conf.d/mysqld.cnf
+数据目录：/usr/local/mysql/data(软连接，实际存储/data1/dbdata)
+日志目录：/usr/local/mysql/logs(软连接，实际存储/data1/logs)，binlog也在这里生成
+重启命令：systemctl restart mysql
+启动命令：systemctl start mysql
+停止命令：systemctl stop mysql"
+oracle,"url:192.168.13.5:1521
+service_name: lucifer
+sys用户：  SYS/123456
+普通用户： fhnsdb/fhnsdb、deye_case_v64/deye_case_v64
+oracle用户的密码oracle","部署软件目录：/usr/local/oracle
+部署数据目录：/usr/local/oracle/data（这是一个软连接，实际位置/data1/dbdata）
+关闭/重启数据库：sqlplus / as sysdba，shutdown immediate;startup;
+重启 Oracle 监听：lsnrctl stop & lsnrctl start
+重启：systemctl restart oracle；systemctl restart oracle-listener"
+redis,"192.168.13.78:7000,192.168.13.78:7001,192.168.13.78:7002,192.168.13.79:7000,192.168.13.79:7001,192.168.13.79:7002
+没有密码", 部署目录：/home/semptian/redis-5.0.8
+doris,"192.168.15.51:9030,192.168.15.53:9030,192.168.15.61:9030,192.168.15.62:9030,192.168.15.70:9030       root/123456
+fe:192.168.15.51,192.168.15.53,192.168.15.61,192.168.15.62,192.168.15.70
+be:192.168.15.51-76
+fe后台页面:  http://192.168.15.51:8030
+doris-manager: http://192.168.15.52:8004/1/monitor/dashboard     root/123456
+be后台页面   http://192.168.15.51:8040/",部署目录：/home/semptian/apache-doris-2.1.6-bin-x64
+es,"kibana:http://192.168.14.1:5601/
+url:  192.168.14.2:9200,192.168.14.3:9200,192.168.14.11:9200
+没有密码
+master 3个： 192.168.14.2,192.168.14.3,192.168.14.11各一个
+node 144个 ：  192.168.14.1-14.36 每个服务器有4个","部署目录：/semptian/elasticsearch-7.15.2/node0-3
+数据目录：data1-3，node0；data4-6，node1；data7-9，node2；data10-12，node3"
+hadoop,"ambari:      http://192.168.16.1:8080/    admin/admin
+mysql:     192.168.16.1:3306 root/123456，作为ambari数据库；由于16.1服务器不稳定，先迁移了hive元数据库
+HDFS-namenode，开启HA: 192.168.16.2（bd-s2）和192.168.16.11(bd-s11)，nameservice是cbpcluster
+HDFS-datanode：bd-s1至bd-s210
+ZooKeeper Server，端口为2181: bd-s7、bd-s8、bd-s14、bd-s15、bd-s21，ip依次为192.168.16.7\192.168.16.8\192.168.16.14\192.168.16.15\192.168.16.21
+Hbase-mater，开启主备: 192.168.16.5、192.168.16.13，hbase在zk的路径为:hbase-unsecure
+Hbase-regionserver：bd-s1至bd-s210
+Yarn-RM，开启HA: bd-s3、bd-s12，ip为192.168.16.3\192.168.16.12，端口为8088，rm-ids是rm1,rm2
+Yarn-NM：bd-s1至bd-s210
+Yarn:192.168.16.19（Timeline Service V1.5、Timeline Service V2.0 Reader）、192.168.16.3(registry dns)
+Hive: 192.168.16.4（Metastore，9083），192.168.16.4（HiveServer2，10000），使用的mysql数据库是192.168.16.9:3306 hive/123456
+spark: 192.168.16.19(history server)
+","使用ambari统一管理，部署目录：/usr/hdp/3.1.5.0-152/
+日志目录：/var/log
+"
+Kafka,"ambari:      http://192.168.15.1:8080/    admin/admin
+mysql:     192.168.13.1:3306 root/123456
+ZooKeeper Server: 192.168.15.2:2181,192.168.15.3:2181,192.168.15.10:2181
+kafka broker：192.168.15.1-15.20，端口为6667
+host name：kafka-s1至kafka-s20","使用ambari统一管理，版本包部署路径：/usr/hdp/3.1.5.0-152/
+日志目录：/var/log
+性能测试结论：9分区2副本topic，发送消息可以达到263.71MB/s，接收消息可以到达607.0879MB/s"
+OSS-A1,页面访问地址：https://172.20.18.170/，用户名和密码：admin/Semptian@123,"1、OSS文件集群DNS IP：192.168.8.150
+2、业务访问IP：192.168.8.191-192，域名mc-oss.domain
+3、管理服务器：172.20.18.170，用户名和密码为root/xuanyuan=1
+4、AK和SK如下：
+AK:6HJA8BC1AZQNXX7WIBTQ
+SK:Tupqq9BB90I11TYHbpdQxXsDEQsoPMWzw2RJaYfC
+5、OSS服务器端常用操作命令
+1）查看集群状态：magcli -s；
+2）查看所有节点storage-data-collection服务状态，其中onnode all指的是作用与所有节点：onnode all systemctl status storage-data-collection.service
+3）查看所有节点指定服务：onnode all systemctl | grep dsm、onnode all systemctl | grep collection"
+nebula,"192.168.13.1:9779, 192.168.13.2:9779, 192.168.13.3:9779
+meta-address: 192.168.13.1:9559,192.168.13.2:9559,192.168.13.3:9559
+
+graph-address: 192.168.13.1:9669,192.168.13.2:9669,192.168.13.3:9669","部署目录：/usr/local/nebula
+状态检测方法: 
+         cd /usr/local/nebula
+         ./nebula-console --addr 192.168.13.1 --port 9669 -u root -p nebula
+         show hosts"
+Flink Client和HDPClient,"服务器为：192.168.13.6
+HDP Client：目录为/usr/hdp，部署目录规范与ambri保持一致，采用软连接方式，真正目录为/data1/usr/hdp。常用命令已经添加至环境变量，包括kafka、zookeeper-client、hadoop、yarn、hive、hbase、spark
+Flink Client：部署目录为/usr/hdp/current/flink-1.12，采用软连接方式，真正目录为/data1/usr/hdp/current，已经加入环境变量
+","hdp相关客户端已经验证通过，flink客户端提交任务正常，测试命令如下，使用flink自带的版本包：
+flink run \
+  -m yarn-cluster \
+  -ynm ""WordCountJob"" \
+  -yD taskmanager.numberOfTaskSlots=4 \
+  -yD jobmanager.memory.process.size=2048m \
+  -yD taskmanager.memory.process.size=4096m \
+  -c org.apache.flink.streaming.examples.wordcount.WordCount \
+  /data1/usr/hdp/current/flink-1.12/examples/streaming/WordCount.jar"
+OSS-B1,页面访问地址：https://172.20.54.120，用户名和密码：admin/Semptian@123,"1、业务访问IP：192.168.54.151，业务访问备用IP：192.168.54.152。域名为：
+annaba-oss.domian
+2、HTTP端口号：8184，HTTPS端口号：8182
+3、AK和SK如下：
+AK:C4RD1OHER75A34NMIC1Y
+SK:DqMW7XiZKMfss8tBxdEHwVHGwzxjofDLG8FT1ALB"
+OSS-C1,页面访问地址：https://172.20.94.120/，用户名和密码：admin/Semptian@123,"1、业务访问IP：192.168.94.151，业务访问备用IP：192.168.94.152。域名为：
+oran-oss.domain
+2、HTTP端口号：8184，HTTPS端口号：8182
+3、AK和SK如下：
+AK:JJX34WDGH8439OEG00O1
+SK:z5CMDgBUPBiNpB9CpFKe2NZLb2yQQwsJ0H74N4DE"
+时钟服务器,"A局点：192.168.13.6
+B1：192.168.54.58
+C1：192.168.94.49",
+,,
+,, 

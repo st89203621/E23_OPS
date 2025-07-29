@@ -1,0 +1,121 @@
+﻿局点,类型,hostname,ip,组件,备注,
+A1,YJ服务-主,svm-s1,192.168.8.53,"timstem: /u01/app/timesten/
+oracal:/opt/oracle/product/19c/dbhome_1
+mysql
+redis：/usr/local/redis-7.0.2/redis_cluster/redis_7001.conf
+部署程序及启动命令：：
+icue：/usr/ss7/bin/icue",数据库,SVM
+A1,YJ服务-主,svm-s2,192.168.8.54,"1、部署程序及启动命令：
+ctm4all：/usr/ss7/bin/ctm4all
+mapbuilder4g：/usr/ss7/bin/mapbuilder4g
+icu：/usr/ss7/bin/icu
+2、文件备份及移动脚本：/data/scripts/deye_phone_collect_schedule_yj1.sh，启动命令 /data/scripts/deye_phone_collect_schedule_yj1.sh start",短信还原,"短信语音和传真话单
+192.168.8.54  eno2np1接M运营商短信"
+A1,YJ服务-主,svm-s3,192.168.8.55,"部署程序及启动命令：
+ICS ：/usr/ss7/app/ICS/bin/ics.sh start
+fsm：/usr/ss7/bin/fsm
+icu：/usr/ss7/bin/icu
+lsh ：/usr/ss7/bin/lsh
+mdr：/usr/ss7/bin/websocketd --port=8081 /usr/ss7/bin/mdr &
+msg：/usr/ss7/bin/msg
+mgmt：/usr/ss7/bin/mgmt
+sipbuilder：/usr/ss7/bin/sipbuilder
+vrg：/usr/ss7/bin/vrg 0&&/usr/ss7/bin/vrg 1
+websocketd：无需启动",语音传真还原,"语音和传真还原
+语音的命中话单"
+A1,YJ服务-主,svm-s4,192.168.8.56,"部署程序及启动命令：
+mgmt：/usr/ss7/bin/mgmt
+icu：/usr/ss7/bin/icu
+mapbuilder4g1：/usr/ss7/bin/mapbuilder4g 1
+mapbuilder4g2：/usr/ss7/bin/mapbuilder4g 2",O和D运营商短信还原,"O和D运营商短信还原
+192.168.8.56  eno2np1接O运营商短信流量(当前没有流量)
+192.168.8.56  ens2f1接D运营商短信流量"
+A1,YJ服务-灾备,,192.168.8.52,"部署采集服务和回放服务，部署目录：/home/semptian/DataCollect-V1.0.0_B78_RC4-Ubuntu-22.04
+采集服务，启动和停止命令：systemctl start datacollect.service、systemctl stop datacollect.service
+进程关键字：data_collect.daemon
+回放服务，临时部署：是离线调度程序","1、采集pcap目录：/data1/voip/pacp
+2、回放目录：/data1/voip/replay","采集包网口：enp94s0f0
+回放包网口：enp94s0f1"
+B1,YJ服务-灾备,,192.168.54.12,"部署采集服务，部署目录：/home/semptian/DataCollect-V1.0.0_B78_RC4-Ubuntu-22.04
+采集服务，启动和停止命令：systemctl start datacollect.service、systemctl stop datacollect.service
+进程关键字：data_collect.daemon","1、采集pcap目录：/data1/voip/pacp
+",
+C1,YJ服务-灾备,,192.168.94.36,"部署采集服务，部署目录：/home/semptian/DataCollect-V1.0.0_B78_RC4-Ubuntu-22.04
+采集服务，启动和停止命令：systemctl start datacollect.service、systemctl stop datacollect.service
+进程关键字：data_collect.daemon","1、采集pcap目录：/data1/voip/pacp
+",
+A1,YJ服务-灾备,,192.168.8.57,"timstem: /u01/app/timesten/，启动命令：ttDaemonAdmin -start，使用oracle用户操作
+oracal:/opt/oracle/product/19c/dbhome_1
+mysql
+redis：/usr/local/redis-7.0.2/redis_cluster/redis_7001.conf
+部署程序及启动命令：：
+icue：/usr/ss7/bin/icue",,
+A1,YJ服务-灾备,,192.168.8.58,"1、启动命令：
+/usr/ss7/bin/mgmt
+/usr/ss7/bin/icu
+/usr/ss7/bin/lsh 
+/usr/ss7/bin/msg
+/usr/ss7/bin/fsm
+/usr/ss7/bin/ctm4all
+/usr/ss7/bin/sipbuilder
+/usr/ss7/bin/vrg 0
+2、文件备份及移动脚本：/data/scripts/deye_phone_collect_schedule_yj1.sh，启动命令 /data/scripts/deye_phone_collect_schedule_yj1.sh start","1、语音文件目录：/voice/mass
+2、voip通话话单目录：/data/phone/csv/mass/call
+3、传真话单目录：/data/phone/csv/mass/fax/
+4、T24设备：192.168.8.7",
+A1,RadiusMapping,rm-s2,192.168.26.22,"部署目录：/home/semptian/D-HAND.MAPPING_V4.3.1_B1385_RC1_Ubuntu22.04_5.15.0-134-generic
+给D-EYE的日志路径：/home/semptian/radius/fixed",固网radiusmapping,
+A1,RadiusMapping,rm-s3,192.168.26.23,"部署目录：/home/semptian/D-HAND.MAPPING_V4.3.1_B1385_RC1_Ubuntu22.04_5.15.0-134-generic
+给D-EYE的日志路径：/home/semptian/radius/mobile",M运营商移动网adiusmapping,
+A1,RadiusMapping,rm-s1,192.168.26.21,"部署目录：/home/semptian/D-HAND.MAPPING_V4.3.1_B1385_RC1_Ubuntu22.04_5.15.0-134-generic
+给D-EYE的日志路径：/home/semptian/radius/mobile",O运营商移动网adiusmapping,
+A1,RadiusMapping,rm-s5,192.168.26.26,"部署目录：/home/semptian/D-HAND.MAPPING_V4.3.1_B1385_RC1_Ubuntu22.04_5.15.0-134-generic
+给D-EYE的日志路径：/home/semptian/radius/mobile",D运营商移动网adiusmapping,
+A1,NGIS.NT,,172.20.31.3,"1、读所有接口统计
+backupcli
+ show statistics traffic all up 
+2、读底层表项
+在管理板上分别到5,6,7,8,11,12,13,14,15,16,17,18槽位
+（管理板ssh到5槽，ssh super@176.0.1.5
+ 管理板ssh到6槽,ssh super@176.0.1.6，其他槽位同理）
+不需要进入backupcli，执行以下命令
+dtweak nt cme oif group a 1 2
+dtweak nt cme oif group b 1 2
+3、读取当前在运行的配置
+show running-config
+
+4、登录用户名密码：
+super/Smallcat@1q2w3e",,
+B1,NGIS.NT,,172.20.51.3,,,
+C1,NGIS.NT,,172.20.91.3,,,
+A2(Benaknoun),NGIS.10T,,192.168.24.1/192.168.24.5,,,
+A3(Djemila),NGIS.10T,,192.168.23.201,,,
+B1(Annaba),NGIS.10T,,192.168.48.1/192.168.48.5,,,
+C1(Oran),NGIS.10T,,192.168.80.1,,,
+B1,DDOS-detect,,"172.20.51.11
+172.20.51.12
+172.20.51.13
+172.20.51.14
+172.20.51.15
+",http://172.20.51.11:28099/，admin/123，下同,,
+B1,DDOS-cleaning,,"172.20.51.21
+172.20.51.22
+172.20.51.23
+",http://172.20.51.21:28099/，admin/123，下同,,
+A1,DDOS-detect,,"172.20.31.11
+172.20.31.12
+172.20.31.13
+172.20.31.14
+",http://172.20.31.11:28099/,,
+A2,DDOS-cleaning,,"192.168.24.31
+192.168.24.32
+192.168.24.33",,,
+A3,DDOS-cleaning,,"192.168.23.232
+192.168.23.233",,,
+C1,DDOS-detect,,"172.20.91.11
+172.20.91.12
+172.20.91.13",,,
+C1,DDOS-cleaning,,"172.20.91.21
+172.20.91.22
+172.20.91.23
+",,,

@@ -1,0 +1,117 @@
+﻿应用,地址信息,备注
+ansible主控,192.168.13.80,部署脚本目录： /opt/
+时钟源,[外部时钟]互联网[内部时钟]192.168.13.6, 
+乾坤登录地址,http://192.168.13.83:9527,"hy/hy@123
+默认管理员：dev/12345678"
+授权服务中心,"用户域访问的管理页面：http://192.168.13.83:9009/teams
+令牌地址：http://192.168.13.83:9009/be052eaf-a0fe-4156-a98f-aa33571dd9ee
+本次授权时间：100年（2025年03月28日 - 2125年03月04日）",admin@qkos.com/A29@semptian
+Nacos V2.2.0,配置地址：http://192.168.13.80:8848/nacos，是一个集群，还有两个节点地址是192.168.13.81/192.168.13.82,admin/admin
+WhalexV4.0.0,"【Whalex基础管理平台】http://192.168.13.83:8020/同IP上：whalex网关-9999、auth-3000、upms-4000
+【MySQL-whalex/whaleconfig库】192.168.13.80:3306 pico/pico-nf-8100，root/pico-nf-8100
+【rabbitmq】192.168.13.82:5672，（管理页面http://192.168.13.82:15672/  weic/weichao）
+【whalex单点redis】192.168.13.82:6379  密码：pico-nf-8100
+【minio】http://192.168.13.82:19001/buckets，浏览器上可以访问，后端访问是http://192.168.13.82:9000",dev/12345678
+云平台抽象层地址V1.1.3,"http://192.168.13.84:7000
+dat：部署在qk-s5（全部）和qk-s8（部分，多实例部署）"," hbase和nebula已经按照操作进行升级
+ 部署目录：/data/whalex_dat_deploy/whalex_dat
+镜像容器更新重启脚本：/data/whalex_dat_deploy/whalex_dat/update_restart.sh
+服务及端口映射关系如下：
+7150 whalex-dat-mysql
+7100 whalex-dat-meiya-es-6x
+7430 whalex-dat-doris
+7003 whalex-dat-res
+7004 whalex-dat-service
+7210 whalex-dat-redis
+7002 whalex-dat-admin
+7000 whalex-dat-gateway
+1700 whalex-dat-task
+7190 whalex-dat-meiya-hive
+7201 whalex-dat-meiya-kafka
+7001 whalex-dat-cache
+7120 whalex-dat-mongodb
+7160 whalex-dat-meiya-hadoop
+7460 whalex-dat-nebulagraph
+7180 whalex-dat-meiya-hbase-2.0.0"
+天基V3.4.6,"【天基登录地址（nginx）】http://192.168.13.86
+【资源目录后端（resource）】http://192.168.13.86:9094
+【天基接入平台】192.168.18.113，5个服务端口：
+jrpt_whale_dataaccess_port=7070
+jrpt_whale_dataaccess_service_port=9089
+jrpt_whale_dataaccess_probe_port=7072
+jrpt_whale_nav_service_port=9093
+jrpt_whale_dataaccess_reconciliation_port=9088
+【数据布控（prewarning）】http://192.168.13.86:18888
+【Mongo】 192.168.13.81:28001 whale/wc@thailand
+【wmb地址（wmb）】http://192.168.13.86:8025
+【质量平台地址（whalex-sbp-quality））】http://192.168.13.86:8096
+【daq集群】http://192.168.13.86:16666
+【MySQL resourceconfig库地址】192.168.13.80:3306/resourceconfig  pico/pico-nf-8100
+【MySQL whaleconfig库地址】192.168.13.80:3306/whaleconfig  pico/pico-nf-8100
+【vsftpd】ftp://192.168.13.82:21 qk/meiya@300188，local_root=/data/ftp/
+【ai对标程序】192.168.18.113:8002【MongoDB】192.168.80.71:28001 whale/wc@thailand
+【minio】[登录页] http://192.168.18.105:19001/login admin/admin123","nginx,resource,prewarning,wmb已经做成service服务，可在服务器进行服务状态检查：systemctl status/start/stop SERVICE_NAME 【配置文件路径】资源目录： /usr/local/whale_resource_web/config/wmb:/usr/local/whale-ms-wmb/config/布控服务：/usr/local/whale_prewarning/config/whalex-sbp-xxx 微服务： 在nacos上，名字格式为whalex-sbp-xxx.ymlAI对标程序：/data/duibiao_2.5.3.5_x86_64/config.ini接入平台jrpt：/data1/jrpt/apps/
+
+天基sbp相关服务以docker方式运行，目录为：/opt/tianji
+docker-compose的目录为：/opt/tianji/sbp-compose
+修改compose文件后，重启：docker-compose -f whalex-sbp-compose.yaml up -d
+日志目录：/data/tianji/logs/"
+Redis单点,192.168.13.82:6379  密码：pico-nf-8100,
+Redis集群,"192.168.13.80:7001,192.168.13.80:7002,192.168.13.81:7001,192.168.13.81:7002,192.168.13.82:7001,192.168.13.82:7002，密码：pico-nf-8100",
+Mysql,192.168.13.80:3306 pico/pico-nf-8100，root/pico-nf-8100,
+minio,【minio】http://192.168.13.82:19001/buckets，浏览器上可以访问，后端访问是http://192.168.13.82:9000，用户密码：admin/admin123,
+Mongo,192.168.13.81:28001 whale/wc@thailand,
+FlinkSQL 1.12.3（standalone）,无, 
+flink 1.12 on yarn(星辰),无, 
+天河v2.5.0,"独立页面：http://192.168.13.85:7200/#/   dev/12345678
+【konga地址】http://192.168.13.85:1337    admin@qkos.com/pico-nf-8100
+postgresql：postgresql://kong:kong@192.168.13.85:5432/konga         kong/kong", 部署目录：/data/deploy/
+天算V3.3.0,"【dmp】[dmp登录页面]  http://192.168.13.87:9095 管理员账号：admin/dmp@2020
+[dmp_redis_server] 192.168.13.82:6379 密码：pico-nf-8100
+[dmp_mongo]192.168.13.81:28001 whale/wc@thailand 
+【woc】[woc_server] 192.168.13.88:30080
+【woc k8s集群】
+192.168.13.88
+192.168.13.89
+192.168.13.90
+192.168.13.91
+192.168.13.92
+192.168.13.93
+[woc_mongo] 192.168.13.81:28001 whale/wc@thailand"," k8s安装目录：/etc/kubeasz
+dmp安装目录:/usr/local/
+wocx模型任务运行日志目录，qk-s9:/data/share/wocx/logs/standalone"
+K8S,"主控机：192.168.18.88，/etc/kubeasz
+集群名称：k8s_v64_0403
+启停及常用命令：
+/etc/kubeasz/ezctl list
+/etc/kubeasz/ezctl stop k8s_v64
+/etc/kubeasz/ezctl start k8s_v64","[etcd]
+192.168.13.89
+192.168.13.90
+192.168.13.91
+
+# master node(s)
+[kube_master]
+192.168.13.88
+
+# work node(s)
+[kube_node]
+192.168.13.88
+192.168.13.89
+192.168.13.90
+192.168.13.91
+192.168.13.92
+192.168.13.93
+"
+天基部署工具,http://192.168.13.6:19051/doc.html,"目录：/data1/semptian/service/qk_tools/
+定时重启ADS任务脚本位置：/data1/semptian/service/restart_ads_tasks"
+kafka查看工具,http://192.168.13.6:7766/#/topic-page,目录：/data1/semptian/service/qk_tools/
+A1-PR授权服务中心,"用户域访问的管理页面：http://192.168.13.87:9009/teams
+令牌地址：http://192.168.13.87:9009/c3e9759a-f6e0-4af2-9423-3c80b2587499
+本次授权时间：100年",admin@qkos.com/A29@semptian
+B1-PR授权服务中心,"用户域访问的管理页面：http://192.168.54.58:9009/teams
+令牌地址：http://192.168.54.58:9009/88bfa155-5ec0-43f3-bb88-d498c8244661
+本次授权时间：",admin@qkos.com/A29@semptian
+C1-PR授权服务中心,"用户域访问的管理页面：http://192.168.94.49:9009/teams
+令牌地址：http://192.168.94.49:9009/42cfd44b-867e-4fe9-96b1-da3d29c3022c
+本次授权时间：",admin@qkos.com/A29@semptian
