@@ -1,0 +1,67 @@
+-- v64_deye_dw_ods.ods_nf_other_log definition
+
+CREATE EXTERNAL TABLE `v64_deye_dw_ods.ods_nf_other_log`(
+  `data_type` int,
+  `user_group` string,
+  `user_name` string,
+  `strsrc_ip` string,
+  `strdst_ip` string,
+  `src_port` int,
+  `dst_port` int,
+  `ip_type` int,
+  `protocol` int,
+  `file_name` string,
+  `file_type` string,
+  `url` string,
+  `domain` string,
+  `dns` string,
+  `net_action` string,
+  `dev_id` string,
+  `terminal_type` string,
+  `mac` string,
+  `app_type` string,
+  `app_name` string,
+  `is_webapp` int,
+  `imei` string,
+  `imsi` string,
+  `mcc` string,
+  `mnc` string,
+  `lac` string,
+  `cell_id` string,
+  `phone_number` string,
+  `url_data` string,
+  `text` string,
+  `line_id` string,
+  `policy` string,
+  `site` string,
+  `trace_t` string,
+  `capture_time` bigint,
+  `insert_time` bigint,
+  `data_id` string,
+  `uparea_id` int)
+PARTITIONED BY (
+  `insert_day` string,
+  `insert_hour` string,
+  `insert_min` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  'hdfs://cbpcluster/warehouse/tablespace/external/hive/v64_deye_dw_ods.db/ods_nf_other_log'
+TBLPROPERTIES (
+  'bucketing_version'='2',
+  'discover.partitions'='false',
+  'parquet.compression'='GZIP',
+  'partition.time-extractor.timestamp-pattern'='$insert_day $insert_hour:$insert_min:00',
+  'sink.partition-commit.policy.kind'='metastore,success-file',
+  'spark.sql.create.version'='2.2 or prior',
+  'spark.sql.sources.schema.numPartCols'='3',
+  'spark.sql.sources.schema.numParts'='1',
+  'spark.sql.sources.schema.part.0'='{"type":"struct","fields":[{"name":"data_type","type":"integer","nullable":true,"metadata":{}},{"name":"user_group","type":"string","nullable":true,"metadata":{}},{"name":"user_name","type":"string","nullable":true,"metadata":{}},{"name":"strsrc_ip","type":"string","nullable":true,"metadata":{}},{"name":"strdst_ip","type":"string","nullable":true,"metadata":{}},{"name":"src_port","type":"integer","nullable":true,"metadata":{}},{"name":"dst_port","type":"integer","nullable":true,"metadata":{}},{"name":"ip_type","type":"integer","nullable":true,"metadata":{}},{"name":"protocol","type":"integer","nullable":true,"metadata":{}},{"name":"file_name","type":"string","nullable":true,"metadata":{}},{"name":"file_type","type":"string","nullable":true,"metadata":{}},{"name":"url","type":"string","nullable":true,"metadata":{}},{"name":"domain","type":"string","nullable":true,"metadata":{}},{"name":"dns","type":"string","nullable":true,"metadata":{}},{"name":"net_action","type":"string","nullable":true,"metadata":{}},{"name":"dev_id","type":"string","nullable":true,"metadata":{}},{"name":"terminal_type","type":"string","nullable":true,"metadata":{}},{"name":"mac","type":"string","nullable":true,"metadata":{}},{"name":"app_type","type":"string","nullable":true,"metadata":{}},{"name":"app_name","type":"string","nullable":true,"metadata":{}},{"name":"is_webapp","type":"integer","nullable":true,"metadata":{}},{"name":"imei","type":"string","nullable":true,"metadata":{}},{"name":"imsi","type":"string","nullable":true,"metadata":{}},{"name":"mcc","type":"string","nullable":true,"metadata":{}},{"name":"mnc","type":"string","nullable":true,"metadata":{}},{"name":"lac","type":"string","nullable":true,"metadata":{}},{"name":"cell_id","type":"string","nullable":true,"metadata":{}},{"name":"phone_number","type":"string","nullable":true,"metadata":{}},{"name":"url_data","type":"string","nullable":true,"metadata":{}},{"name":"text","type":"string","nullable":true,"metadata":{}},{"name":"line_id","type":"string","nullable":true,"metadata":{}},{"name":"policy","type":"string","nullable":true,"metadata":{}},{"name":"site","type":"string","nullable":true,"metadata":{}},{"name":"trace_t","type":"string","nullable":true,"metadata":{}},{"name":"capture_time","type":"long","nullable":true,"metadata":{}},{"name":"insert_time","type":"long","nullable":true,"metadata":{}},{"name":"data_id","type":"string","nullable":true,"metadata":{}},{"name":"uparea_id","type":"integer","nullable":true,"metadata":{}},{"name":"insert_day","type":"string","nullable":true,"metadata":{}},{"name":"insert_hour","type":"string","nullable":true,"metadata":{}},{"name":"insert_min","type":"string","nullable":true,"metadata":{}}]}',
+  'spark.sql.sources.schema.partCol.0'='insert_day',
+  'spark.sql.sources.schema.partCol.1'='insert_hour',
+  'spark.sql.sources.schema.partCol.2'='insert_min',
+  'transient_lastDdlTime'='1744548422');
