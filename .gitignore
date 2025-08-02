@@ -1,11 +1,5 @@
 ## 不需要版本管理的文件或目录
 .idea
-deye-nms-alarm/target/
-deye-nms-monitor-local/target/
-deye-nms-monitor-local/nms-monitor-local-error/
-deye-nms-web/target
-deye-nms-monitor-remote/target/
-deye-nms-monitor-load/target/
 **/target/
 /.setting/
 /.vscode/
