@@ -1,0 +1,52 @@
+-- v64_deye_dw_ods.deye_ods_voip_fax_dr_test definition
+
+CREATE EXTERNAL TABLE `v64_deye_dw_ods.deye_ods_voip_fax_dr_test`(
+  `strsrc_ip` string,
+  `strdst_ip` string,
+  `sender_from_url` string,
+  `receiver_to_url` string,
+  `sender_sip_number` string,
+  `receiver_sip_number` string,
+  `call_id` string,
+  `sender_nickname` string,
+  `receiver_nickname` string,
+  `start_time` bigint,
+  `end_time` bigint,
+  `duration` int,
+  `media_type` string,
+  `media_protocol` string,
+  `media_format` string,
+  `file_path` string,
+  `file_size` int,
+  `capture_time` bigint,
+  `insert_time` bigint,
+  `data_id` string,
+  `data_type` int,
+  `fault_flag` int)
+PARTITIONED BY (
+  `capture_day` string,
+  `capture_hour` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  'hdfs://cbpcluster/warehouse/tablespace/external/hive/v64_deye_dw_ods.db/deye_ods_voip_fax_dr_test'
+TBLPROPERTIES (
+  'bucketing_version'='2',
+  'discover.partitions'='false',
+  'last_modified_by'='anonymous',
+  'last_modified_time'='1746866261',
+  'parquet.compression'='GZIP',
+  'partition.time-extractor.timestamp-pattern'='$capture_day $capture_hour:00:00',
+  'sink.partition-commit.delay'='5 min',
+  'sink.partition-commit.policy.kind'='metastore,success-file',
+  'spark.sql.create.version'='2.2 or prior',
+  'spark.sql.sources.schema.numPartCols'='2',
+  'spark.sql.sources.schema.numParts'='1',
+  'spark.sql.sources.schema.part.0'='{"type":"struct","fields":[{"name":"strsrc_ip","type":"string","nullable":true,"metadata":{}},{"name":"strdst_ip","type":"string","nullable":true,"metadata":{}},{"name":"sender_from_url","type":"string","nullable":true,"metadata":{}},{"name":"receiver_to_url","type":"string","nullable":true,"metadata":{}},{"name":"sender_sip_number","type":"string","nullable":true,"metadata":{}},{"name":"receiver_sip_number","type":"string","nullable":true,"metadata":{}},{"name":"call_id","type":"string","nullable":true,"metadata":{}},{"name":"sender_nickname","type":"string","nullable":true,"metadata":{}},{"name":"receiver_nickname","type":"string","nullable":true,"metadata":{}},{"name":"start_time","type":"long","nullable":true,"metadata":{}},{"name":"end_time","type":"long","nullable":true,"metadata":{}},{"name":"duration","type":"integer","nullable":true,"metadata":{}},{"name":"media_type","type":"string","nullable":true,"metadata":{}},{"name":"media_protocol","type":"string","nullable":true,"metadata":{}},{"name":"media_format","type":"string","nullable":true,"metadata":{}},{"name":"file_path","type":"string","nullable":true,"metadata":{}},{"name":"file_size","type":"integer","nullable":true,"metadata":{}},{"name":"capture_time","type":"long","nullable":true,"metadata":{}},{"name":"insert_time","type":"long","nullable":true,"metadata":{}},{"name":"data_id","type":"string","nullable":true,"metadata":{}},{"name":"data_type","type":"integer","nullable":true,"metadata":{}},{"name":"fault_flag","type":"integer","nullable":true,"metadata":{}},{"name":"capture_day","type":"string","nullable":true,"metadata":{}},{"name":"capture_hour","type":"string","nullable":true,"metadata":{}}]}',
+  'spark.sql.sources.schema.partCol.0'='capture_day',
+  'spark.sql.sources.schema.partCol.1'='capture_hour',
+  'transient_lastDdlTime'='1753095271');
