@@ -6,7 +6,29 @@ mkdir -p ./output_new/$yesterday
 
 # NF移网关联准确度
 for uparea_id in 210213 220214 230215; do
-    spark-sql --master yarn --name "nf_mob_acc_${yesterday}_${uparea_id}" --conf spark.driver.memory=2g --conf spark.executor.memory=12g --conf spark.executor.instances=16 -e "
+    spark-sql --master yarn --name "nf_mob_acc_${yesterday}_${uparea_id}" \
+    --conf spark.driver.memory=16g \
+    --conf spark.driver.cores=8 \
+    --conf spark.executor.memory=32g \
+    --conf spark.executor.cores=8 \
+    --conf spark.executor.instances=48 \
+    --conf spark.default.parallelism=384 \
+    --conf spark.sql.adaptive.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.minPartitionNum=8 \
+    --conf spark.sql.adaptive.coalescePartitions.initialPartitionNum=384 \
+    --conf spark.sql.files.maxPartitionBytes=134217728 \
+    --conf spark.sql.files.openCostInBytes=4194304 \
+    --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+    --conf spark.sql.adaptive.skewJoin.enabled=true \
+    --conf spark.sql.adaptive.localShuffleReader.enabled=true \
+    --conf spark.sql.adaptive.advisoryPartitionSizeInBytes=134217728 \
+    --conf spark.sql.shuffle.partitions=384 \
+    --conf spark.sql.execution.arrow.pyspark.enabled=true \
+    --conf spark.sql.execution.arrow.maxRecordsPerBatch=20000 \
+    --conf spark.network.timeout=800s \
+    --conf spark.executor.heartbeatInterval=60s \
+    --conf spark.dynamicAllocation.enabled=false -e "
     SELECT 'nf移网关联准确率' AS cal_type, '$yesterday' AS cal_day, '00-23' AS cal_hour, '$uparea_id' AS uparea_id,
            SUM(if(calling_station_id = user_name,1,0)) AS connect_account, SUM(1) AS total_account,
            SUM(if(calling_station_id = user_name,1,0)) / SUM(1) AS acc_rate
@@ -33,7 +55,18 @@ done
 
 # NF固网关联准确度
 for uparea_id in 210213 220214 230215; do
-    spark-sql --master yarn --name "nf_fix_acc_${yesterday}_${uparea_id}" --conf spark.driver.memory=2g --conf spark.executor.memory=12g --conf spark.executor.instances=16 -e "
+    spark-sql --master yarn --name "nf_fix_acc_${yesterday}_${uparea_id}" \
+    --conf spark.driver.memory=8g \
+    --conf spark.driver.cores=4 \
+    --conf spark.executor.memory=24g \
+    --conf spark.executor.cores=4 \
+    --conf spark.executor.instances=32 \
+    --conf spark.default.parallelism=64 \
+    --conf spark.sql.adaptive.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.enabled=true \
+    --conf spark.sql.files.maxPartitionBytes=268435456 \
+    --conf spark.sql.files.openCostInBytes=8388608 \
+    --conf spark.serializer=org.apache.spark.serializer.KryoSerializer -e "
     SELECT 'nf固网关联准确率' AS cal_type, '$yesterday' AS cal_day, '00-23' AS cal_hour, '$uparea_id' AS uparea_id,
            SUM(IF(lower(user_name) = lower(account),1,0)) AS connect_account, SUM(1) AS total_account,
            SUM(IF(lower(user_name) = lower(account),1,0)) / SUM(1) AS acc_rate

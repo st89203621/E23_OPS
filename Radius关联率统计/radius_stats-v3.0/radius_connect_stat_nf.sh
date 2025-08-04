@@ -3,7 +3,31 @@
 #sparksql提交查询任务
 submit_task() {
     task_name=$3
-    spark_param="--master yarn --name ${task_name} --conf spark.driver.memory=2g --conf spark.driver.cores=2 --conf spark.executor.memory=12g --conf spark.executor.cores=4 --conf spark.executor.instances=16 --conf spark.default.parallelism=16"
+    spark_param="--master yarn --name ${task_name} \
+    --conf spark.driver.memory=16g \
+    --conf spark.driver.cores=8 \
+    --conf spark.executor.memory=32g \
+    --conf spark.executor.cores=8 \
+    --conf spark.executor.instances=64 \
+    --conf spark.default.parallelism=512 \
+    --conf spark.sql.adaptive.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.minPartitionNum=16 \
+    --conf spark.sql.adaptive.coalescePartitions.initialPartitionNum=512 \
+    --conf spark.sql.files.maxPartitionBytes=134217728 \
+    --conf spark.sql.files.openCostInBytes=4194304 \
+    --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+    --conf spark.sql.adaptive.skewJoin.enabled=true \
+    --conf spark.sql.adaptive.localShuffleReader.enabled=true \
+    --conf spark.sql.adaptive.advisoryPartitionSizeInBytes=134217728 \
+    --conf spark.sql.shuffle.partitions=512 \
+    --conf spark.sql.execution.arrow.pyspark.enabled=true \
+    --conf spark.sql.execution.arrow.maxRecordsPerBatch=20000 \
+    --conf spark.network.timeout=800s \
+    --conf spark.executor.heartbeatInterval=60s \
+    --conf spark.dynamicAllocation.enabled=false \
+    --conf spark.sql.broadcastTimeout=36000 \
+    --conf spark.sql.adaptive.maxShuffledHashJoinLocalMapThreshold=134217728"
     spark-sql -e "$1" $spark_param >> $2
     # 将csv分隔符改为逗号
     sed -i "s/\t/,/g" $2

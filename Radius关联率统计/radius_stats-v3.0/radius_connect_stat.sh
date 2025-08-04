@@ -3,7 +3,21 @@
 #sparksql提交查询任务
 submit_task() {
     task_name=$3
-    spark_param="--master yarn --name ${task_name} --conf spark.driver.memory=8g --conf spark.driver.cores=2 --conf spark.executor.memory=48g --conf spark.executor.cores=4 --conf spark.executor.instances=16 --conf spark.default.parallelism=64"
+    spark_param="--master yarn --name ${task_name} \
+    --conf spark.driver.memory=8g \
+    --conf spark.driver.cores=4 \
+    --conf spark.executor.memory=48g \
+    --conf spark.executor.cores=4 \
+    --conf spark.executor.instances=24 \
+    --conf spark.default.parallelism=96 \
+    --conf spark.sql.adaptive.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.minPartitionNum=1 \
+    --conf spark.sql.files.maxPartitionBytes=268435456 \
+    --conf spark.sql.files.openCostInBytes=8388608 \
+    --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+    --conf spark.sql.adaptive.skewJoin.enabled=true \
+    --conf spark.sql.adaptive.localShuffleReader.enabled=true"
     spark-sql -e "$1" $spark_param >> $2
     # 将csv分隔符改为逗号
     sed -i "s/\t/,/g" $2
@@ -39,7 +53,7 @@ read_config() {
 read_config "query.conf"
 
 #获取环境变量
-source /etc/profile
+. /etc/profile
 
 # 将日期转换为秒数，以便计算日期差
 start_seconds=$(date -d "$start_day" +%s)
@@ -195,7 +209,8 @@ pr_mob_acc_rate() {
 
 # 计算所有关联率
 start_all(){
-    for (( day_seconds = start_seconds; day_seconds <= end_seconds; day_seconds += 86400 )); do
+    day_seconds=$start_seconds
+    while [ $day_seconds -le $end_seconds ]; do
         cal_day=$(date -d "@$day_seconds" +"%Y-%m-%d")
         end_day_time=$(($(date -d "$cal_day 00:00:00" +"%s")*1000+86400000))
         end_hour_time=$(($(date -d "$cal_day $end_hour:00:00" +"%s")*1000+3600000))
@@ -216,12 +231,15 @@ start_all(){
 
         pr_fix_acc_rate $cal_day
         pr_mob_acc_rate $cal_day
+
+        day_seconds=$((day_seconds + 86400))
     done
 }
 
 # 计算所有关联率
 start_all_today(){
-    for (( day_seconds = start_seconds; day_seconds <= end_seconds; day_seconds += 86400 )); do
+    day_seconds=$start_seconds
+    while [ $day_seconds -le $end_seconds ]; do
         cal_day=$(date -d "@$day_seconds" +"%Y-%m-%d")
         end_day_time=$(($(date -d "$cal_day 00:00:00" +"%s")*1000+86400000))
         end_hour_time=$(($(date -d "$cal_day $end_hour:00:00" +"%s")*1000+3600000))
@@ -241,12 +259,15 @@ start_all_today(){
         pr_mob_acc_rate $cal_day
         nf_fix_acc_rate $cal_day
         pr_fix_acc_rate $cal_day
+
+        day_seconds=$((day_seconds + 86400))
     done
 }
 
 # 计算nf关联率
 start_nf() {
-    for (( day_seconds = start_seconds; day_seconds <= end_seconds; day_seconds += 86400 )); do
+    day_seconds=$start_seconds
+    while [ $day_seconds -le $end_seconds ]; do
         cal_day=$(date -d "@$day_seconds" +"%Y-%m-%d")
         end_day_time=$(($(date -d "$cal_day 00:00:00" +"%s")*1000+86400000))
         end_hour_time=$(($(date -d "$cal_day $end_hour:00:00" +"%s")*1000+3600000))

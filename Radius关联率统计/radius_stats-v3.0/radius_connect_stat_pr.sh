@@ -3,7 +3,21 @@
 #sparksql提交查询任务
 submit_task() {
     task_name=$3
-    spark_param="--master yarn --name ${task_name} --conf spark.driver.memory=2g --conf spark.driver.cores=2 --conf spark.executor.memory=12g --conf spark.executor.cores=4 --conf spark.executor.instances=16 --conf spark.default.parallelism=16"
+    spark_param="--master yarn --name ${task_name} \
+    --conf spark.driver.memory=8g \
+    --conf spark.driver.cores=4 \
+    --conf spark.executor.memory=24g \
+    --conf spark.executor.cores=4 \
+    --conf spark.executor.instances=32 \
+    --conf spark.default.parallelism=64 \
+    --conf spark.sql.adaptive.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.enabled=true \
+    --conf spark.sql.adaptive.coalescePartitions.minPartitionNum=1 \
+    --conf spark.sql.files.maxPartitionBytes=268435456 \
+    --conf spark.sql.files.openCostInBytes=8388608 \
+    --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+    --conf spark.sql.adaptive.skewJoin.enabled=true \
+    --conf spark.sql.adaptive.localShuffleReader.enabled=true"
     spark-sql -e "$1" $spark_param >> $2
     # 将csv分隔符改为逗号
     sed -i "s/\t/,/g" $2
