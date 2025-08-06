@@ -1,0 +1,24 @@
+服务器：192.168.54.1-192.168.54.20  排除  192.168.54.4 和192.168.54.12  root/123456
+先进行磁盘挂载
+mkfs.xfs -f /dev/mapper/mpatha-part1
+mkdir /data2
+mount /dev/mapper/mpatha-part1  /data2
+
+挂载后记得写入fstab：UUID="91ecd7db-ba25-4677-b89c-e52d50e224fa" /data2/ xfs defaults,nofail,_netdev,x-systemd.device-timeout=5 0 2
+
+步骤1：停止当前master和task
+/data1/daq/deye-pr-collect-master-1.4.3-SNAPSHOT/bin/semptian-master.sh stop
+/data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT//bin/semptian-task.sh stop
+步骤2：停止mq,迁移mq到data2,启动mq
+步骤3：连接前置接入mysql,执行如下语句，ip替换成对应的IP：update t_scan_info set history_zip_path = replace(history_zip_path,'/data1/pr-collect','/data2/pr-collect'),mq_status_error_zip_path = replace(mq_status_error_zip_path,'/data1/pr-collect','/data2/pr-collect'),fs_prop = replace(fs_prop,'/data1/pr-collect','/data2/pr-collect') where exec_ip = '172.16.80.38';
+步骤4：执行如下语句
+sed -i 's/\/data1\/pr-collect/\/data2\/pr-collect/g' /data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT/conf/task.properties
+sed -i 's/\/data1\/pr-collect/\/data2\/pr-collect/g' /data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT/conf/semptian/semptian-application.properties
+mkdir -p /data2/pr-collect/upload
+步骤5：启动master和task，观察task日志是否正常
+/data1/daq/deye-pr-collect-master-1.4.3-SNAPSHOT/bin/semptian-master.sh start
+/data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT/bin/semptian-task.sh start
+
+启动摆渡服务和压缩服务
+/data1/daq/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
+/data1/daq/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
