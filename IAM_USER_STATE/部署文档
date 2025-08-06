@@ -1,0 +1,73 @@
+IAM设备Top 10用户流速统计项目部署文档
+1. 项目简介
+本项目旨在通过调用IAM设备的API，统计用户流量并生成Top 10用户流速排名。脚本将读取配置文件，获取IAM设备信息，执行统计任务，并将结果输出为Excel文件。
+2. 目录结构说明
+在执行部署前，请了解项目的主要目录结构及其用途：
+/semptian/IAM_project/
+├── config.py               # 项目主配置文件
+├── user_flow_stats.py      # 主执行脚本
+├── input/                    # 存放输入文件，如"IAM配置.xlsx"
+│   └── IAM配置.xlsx
+├── output/                   # 存放生成的统计结果Excel文件
+├── logs/                     # 存放运行日志
+├── offline_packages/         # 存放离线Python依赖包
+├── requirements-offline.txt  # 离线依赖列表
+├── requirements.txt          # 在线依赖列表
+└── tests/                    # 测试脚本目录
+
+3. 部署步骤
+步骤一：创建项目目录并上传文件
+首先，在服务器上创建项目根目录。
+sudo mkdir -p /semptian/IAM_project
+
+然后，将项目压缩包 IAM_UserFlowStats.zip 和离线依赖包 offline_packages.zip 上传到刚刚创建的 /semptian/IAM_project 目录中。
+步骤二：解压项目文件并授权
+进入项目目录，解压 IAM_UserFlowStats.zip。
+cd /semptian/IAM_project
+unzip IAM_UserFlowStats.zip
+
+为确保所有脚本和文件具有正确的读写执行权限，请执行以下命令：
+sudo chmod -R 777 /semptian/IAM_project
+
+步骤三：安装离线依赖
+项目依赖的Python包已打包为 offline_packages.zip，请按照以下步骤进行安装。
+1.解压离线依赖包
+unzip /semptian/IAM_project/offline_packages.zip -d /semptian/IAM_project/
+
+2.执行离线安装脚本
+进入解压后的 offline_packages 目录，并运行安装脚本。
+cd /semptian/IAM_project/offline_packages
+python3 offline_installer.py
+
+该脚本会自动安装 requirements-offline.txt 中列出的所有依赖包。
+4. 配置说明
+项目的核心配置均在 /semptian/IAM_project/config.py 文件中。在运行脚本前，请务必检查并修改相关配置。
+关键配置项：SHARED_SECRET
+这是最重要的配置项，用于API认证。
+●路径: /semptian/IAM_project/config.py
+●配置项: SHARED_SECRET
+●说明: 此共享密钥 必须 与现场IAM设备上配置的值完全一致，否则API请求将失败。
+●示例值:
+○实验室环境配置值为: SHARED_SECRET = "1"，即下图1处。
+○
+○图为iam管理页面，注意需要配置python脚本所在服务器的ip地址到图中2处,目的是赋予该服务器调用接口的权限。
+○请根据实际部署环境修改此值。
+其他配置项
+可以根据需求调整 config.py 中的其他配置：
+●INPUT_FILE_PATH: 输入的IAM配置文件路径，默认为 input/IAM配置.xlsx。
+●OUTPUT_DIR: 输出结果的目录，默认为 output。
+●OUTPUT_FILENAME: 输出结果的文件名，默认为 用户流量统计结果.xlsx。
+●API_PORT: IAM设备API端口，默认为 9999。
+●REQUEST_TIMEOUT: 请求超时时间（秒），默认为 30。
+●MAX_RETRIES: API请求失败后的最大重试次数，默认为 3。
+5. 执行与结果查看
+步骤一：准备输入文件
+将包含IAM局点和对应IP地址的 IAM配置.xlsx 文件放置在 /semptian/IAM_project/input/ 目录下。
+步骤二：执行统计脚本
+完成所有配置后，返回项目根目录，并使用 python3 执行主脚本。
+cd /semptian/IAM_project
+python3 user_flow_stats.py
+
+脚本开始运行后，会依次读取 input 目录中的配置文件，向IAM设备发起API请求，并将统计过程中的信息记录到 logs 目录。
+步骤三：查看结果
+脚本执行成功后，统计结果将保存在 /semptian/IAM_project/output/ 目录下的 用户流量统计结果.xlsx 文件中。可以下载该文件查看Top 10用户流速排名。
