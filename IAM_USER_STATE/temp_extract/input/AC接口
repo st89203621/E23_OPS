@@ -1,0 +1,1456 @@
+	深信服AC开放接口
+一. 文档介绍
+二. 使用方法
+三. 接口描述
+1. Status接口:
+1.1 获取版本信息
+1.2 获取在线用户数
+1.3 获取会话数
+1.4 获取内置库信息
+1.5 获取行为日志数量
+1.6 获取CPU使用率
+1.7 获取内存使用率
+1.8 获取磁盘使用率
+1.9 获取系统时间
+1.10 获取吞吐量
+1.11 获取用户流量排行
+1.12 获取应用流量排行
+1.13 获取带宽使用率
+2. 用户/组相关接口
+2.1 添加用户
+2.2  删除用户
+2.3  搜索用户
+2.4  修改用户信息
+2.5  获取用户详细信息
+2.6  用户关联上网策略
+2.7  获取用户上网策略
+2.8  用户关联流控策略
+2.9  获取用户流控策略
+2.10  验证用户密码
+2.11  添加组
+2.12  删除组
+2.13  修改组信息
+2.14  组关联上网策略
+2.15  获取组关联上网策略
+3. 策略相关接口
+3.1 获取所有上网策略信息
+3.2 获取所有流控策略信息
+4. BindInfo接口
+4.1  查询用户和IP/MAC的绑定关系
+4.2  查询IPMAC绑定关系
+4.3  删除用户和IP/MAC的绑定关系
+4.4  删除IPMAC绑定信息
+4.5  增加用户和IP/MAC的绑定关系
+4.6  增加IPMAC绑定信息
+5. OnlineUsers接口
+5.1  获取某用户的在线信息
+5.2  强制注销在线用户
+5.3  上线在线用户（单点登录）
+四. 错误信息
+五. 注意事项
+
+一. 文档介绍
+本文档主要介绍对外提供Restful接口的使用方法,包括以下几个方面:
+   目前支持的接口:状态(status)、用户/组管理接口、策略管理接口、绑定关系（bindInfo）接 口和在线用户（onlineUsers)接口。
+  接口输入输出标准
+开放接口适用场景：
+  环境中有统一的管理平台，管理员期望对AC/SG等设备进行统一的管理维护，推荐使用开放 接口功能进行对接
+   支持restful接口的系统都支持通过"开放接口"功能，对AC/SG等设备进行数据读取或管理
+二. 使用方法
+假设请求双方分别为client(192.168.1.1),AC(192.168.1.2),其中client为客户端,AC为提供Restful服 务的AC设备
+  在AC设备的"高级设置--开放接口"中启用开放接口选项
+   配置共享密钥,并将client的IP(192.168.1.1)或所在IP段加入白名单
+
+
+   random为client请求时随机生成的字串,且同一random,1小时内只能使用1次,否则权限校验 不通过
+   md5是"共享密钥+random"拼接后的字符串计算出的md5值,注意顺序上必须是"共享密钥 +random",不能颠倒
+
+比如前端配置的密钥是1,random是2,,那拼接后的字符串就是"12",算出的md5是
+c20ad4d76fe97759aa27a0c99bff6710,则请求的参数就是:
+random=2&md5=c20ad4d76fe97759aa27a0c99bff6710
+
+
+  接口类型为GET时,random和md5的值附于url后,格式为:http://acip:9999/接口名称? random=xxxx&md5=xxxx,
+例如在线用户接口参数:http://acip:9999/v1/status/online-user?random=xxxx&md5=xxxx
+
+
+  接口类型为POST时, HTTP头必须指定Content-Type:application/json格式,random和md5要 在请求时以JSON格式携带,例如添加用户接口http://acip:9999/v1/user携带的参数如下:
+
+{
+"random": "xxxx",
+"md5": "xxxx",
+"name": "hello"
+}
+
+
+  注意:
+1. 全局流速单位,默认为bytes
+2. 接口信息支持中英文切换,默认为英文,请求时指定请求头中的"Accept-Language"字段值 为"zh-CN"可切换到中文
+3. 用户/组相关接口不支持中英文切换,具体语言是和restful服务所在AC设备语言保持一致的
+4. 部分接口如获取吞吐量,获取用户流量和应用流量排行等的性能开销较大,建议不要频繁请求
+5. 获取全局流速单位或流速单位进制,可登录相应的设备,查看"系统管理-高级设置-WEBUI"选项 或者请求以下接口:
+http://acip:9999/v1/status/flux-units获取(flow_unit:流速单位 flux_prefix:流量单位)
+
+{
+"code": 0,
+"message": "Successfully",
+"data": {
+"flow_unit": "B/s",
+"flux_prefix": 1024
+}
+}
+
+AC
+
+
+
+校验通过,返回数据,否则返回具体的错误信息
+
+client
+
+
+三. 接口描述
+1. Status接口:
+1.1 获取版本信息
+   请求地址: http://acip:9999/v1/status/version
+  功能: 获取设备的版本号
+  方法:   GET
+  结果参数
+
+参数	必选	描述
+code	true	是否成功获取结果,0为是,1为否
+message	true	code为0时,固定为"Successfully",为1时为错误信息
+data	false	code为0时,为具体结果数据,如下JSON所示,为1时,则无此字段
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": "AC12.0.9.044  B Build20171216"
+}
+数据字段描述:
+
+字段名	类型	描述
+data	string	设备版本号
+失败返回:
+
+1.2 获取在线用户数
+   请求地址: http://acip:9999/v1/status/online-user
+  功能: 获取当前设备的在线用户数
+  方法:   GET
+  结果参数同上
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": 2
+}
+
+
+数据字段描述:
+
+字段名	类型	描述
+data	number	在线用户数
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.3 获取会话数
+   请求地址: http://acip:9999/v1/status/session-num
+  功能: 获取当前设备的会话数
+  方法:   GET
+  结果参数同上
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": 20
+}
+数据字段描述:
+
+字段名	类型	描述
+data	number	会话数
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.4 获取内置库信息
+   请求地址: http://acip:9999/v1/status/insidelib
+  功能: 获取设备内置库版本信息,包含病毒库,URL库等模块
+  方法:  GET
+  结果参数同上
+成功返回:
+
+
+{
+"current": "2017-12-15"
+"enable": true,
+"new": "2017-12-16",
+"name": "病毒库",
+"expire": "2020-06-24",
+"type": "kav",
+"is_expired": 0
+},
+{
+"current": "2017-12-11
+"enable": true,
+"new": "2017-12-11",
+"name": "URL库",
+"expire": "2020-06-24",
+"type": "url",
+"is_expired": 1
+}
+]
+}
+
+数据字段描述:
+
+字段名	类型	描述
+name	string	库名称
+current	string	当前版本
+new	string	最新版本
+expire	string	升级服务的序列号过期时间
+enable	boolean	是否启用自动升级
+
+type	string	规则库类型(kav:病毒库 url:URL库 up:网关补丁 contchk:应用识别
+trace:审计规则库)
+is_expired	number	规则库是否过期(0:未过期 1:过期)
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.5 获取行为日志数量
+   请求地址: http://acip:9999/v1/status/log
+  功能: 获取实时的行为日志数量,包含拦截和记录数
+  方法:   GET
+  结果参数同上
+成功返回:
+
+
+{
+"code": 0,
+"message": "Successfully",
+"data": {
+"block": 111,
+"record": 222
+}
+}
+数据字段描述:
+
+字段名	类型	描述
+block	number	拦截数
+record	number	记录数
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.6 获取CPU使用率
+   请求地址: http://acip:9999/v1/status/cpu-usage
+  功能: 获取设备的实时CPU使用率
+  方法:   GET
+  结果参数同上
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": 4
+}
+数据字段描述:
+
+字段名	类型	描述
+data	number	CPU使用率(%)
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+
+
+1.7 获取内存使用率
+   请求地址: http://acip:9999/v1/status/mem-usage
+  功能: 获取设备的实时内存使用率
+  方法:   GET
+  结果参数同上
+成功返回:
+
+数据字段描述:
+
+字段名	类型	描述
+data	number	内存使用率(%)
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.8 获取磁盘使用率
+   请求地址: http://acip:9999/v1/status/disk-usage
+  功能: 获取设备的磁盘使用率
+  方法:  GET
+  结果参数同上
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": 14
+}
+数据字段描述:
+
+字段名	类型	描述
+data	number	磁盘使用率(%)
+失败返回:
+
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.9 获取系统时间
+   请求地址: http://acip:9999/v1/status/sys-time
+  功能: 获取设备的当前系统时间
+  方法:   GET
+  结果参数同上
+成功返回:
+
+数据字段描述:
+
+字段名	类型	描述
+data	string	系统时间(格式: %Y-%m-%d %H:%M:%S)
+
+
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.10 获取吞吐量
+   请求地址: http://acip:9999/v1/status/throughput?_method=GET
+  功能: 获取设备的上行和下行流速
+  方法:  POST
+  结果参数同上
+   支持请求时携带过滤数据,例如:
+
+过滤字段描述:
+
+
+字段名	类型	必填	描述
+unit	string	false	流速单位(bits或bytes),默认值为bytes
+interface	string	false	网口("eth0,eth1"等具体网口),默认值为所有WAN口
+成功返回:
+
+数据字段描述:
+
+字段名	类型	描述
+send	number	网口总上行流速
+recv	number	网口总下行流速
+unit	string	流速单位(bits或bytes)
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+
+
+1.11 获取用户流量排行
+   请求地址: http://acip:9999/v1/status/user-rank?_method=GET
+  功能: 获取用户维度下,针对上行,下行,总流速的占比排行
+  方法:  POST
+   支持请求时携带过滤数据,例如:
+
+
+
+  结果参数同上
+过滤字段描述:
+
+字段名	类型	描述
+top	number	TopN排行
+groups	string array	要过滤的组(以"/"开头)
+users	string array	要过滤的用户
+ips	string array	要过滤的IP(只支持单个IP,不支持IP组)
+line	string	线路号(0:所有线路 1-N: 具体线路)
+注:以上过滤字段"groups","users","ips",同时只能选择其中一种过滤条件来过滤,若同时传入多个过 滤条件,则过滤条件只会生效1种,优先级为"groups > users > ips"
+成功返回:
+
+
+
+
+
+数据字段描述:
+
+字段名	类型	描述
+id	number	序号
+name	string	用户名
+group	string	组
+ip	string	IP地址
+up	number	上行流量(单位: bytes)
+down	number	下行流量(单位: bytes)
+total	number	总流量(单位: bytes)
+session	number	会话数
+status	boolean	冻结状态(false为冻结)
+detail	object	详细信息
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.12 获取应用流量排行
+   请求地址: http://acip:9999/v1/status/app-rank?_method=GET
+  功能: 获取应用维度下,针对上行,下行,总流速的占比排行
+  方法:   POST
+   支持请求时携带过滤数据,例如:
+
+
+  结果参数同上
+过滤字段描述:
+
+字段名	类型	描述
+top	number	TopN排行
+groups	string array	用户组(以"/"开头)
+line	string	线路号(0:所有线路 1-N: 具体线路)
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": [
+{
+"app": "其他网页证券行情[网站浏览]",
+"line": 0,
+"line_name": "全部线路",
+"up": 5308,
+"down": 148043,
+"total": 153351,
+"rate": 100,
+"session": 0,
+"user_data": {
+"data": [
+{
+"user": "11.16.1.101",
+"grp": "/tue",
+"ip": "11.16.1.101",
+"up": 5308,
+"down": 148043,
+"total": 153351
+}
+],
+"count": 1
+}
+}
+]
+}
+数据字段描述:
+
+
+字段名	类型	描述
+app	string	应用名
+line	number	线路
+line_name	string	线路名
+up	number	上行流量(单位: bytes)
+down	number	下行流量(单位: bytes)
+total	number	总流量(单位: bytes)
+rate	number	流量占比(%)
+session	number	会话数
+user_data	object	用户详细数据
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+1.13 获取带宽使用率
+   请求地址: http://acip:9999/v1/status/bandwidth-usage
+  功能: 获取带宽使用率
+  方法:   GET
+  结果参数同上
+成功返回:
+
+数据字段描述:
+
+字段名	类型	描述
+data	number	带宽使用率(%)
+失败返回:
+
+{
+"code": 1,
+"message": "Unknow error, fail to acquire data!"
+}
+
+
+2. 用户/组相关接口
+2.1 添加用户
+   请求地址: http://acip:9999/v1/user
+  功能: 添加新用户,可同时设置多个用户属性
+  方法:   POST
+请求时携带的数据:
+
+{
+"name": "hello" "father_path":  "desc": "",
+"show_name": "" "expire_time":
+}
+
+,
+"/",
+
+,
+"2018-01-10 00:00:00"
+操作字段描述:
+
+字段名	类型	必填	描述
+name	string	true	用户名
+father_path	string	false	父组,即用户添加后所在组(以"/"开头,且不支持向域用户组添
+加用户)
+desc	string	false	用户描述
+show_name	string	false	用户显示名
+expire_time	string	false	账号过期时间，格式为“YY-MM-dd hh:mm:ss”, 为空或无此 字段表示不过期
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": "Add user success!"
+}
+扩展支持的用户属性:
+
+
+
+    注: 基本属性和扩展属性字段都是相对独立的,使用时多个字段是平级关系
+扩展字段描述:
+
+字段名	类型	必填	描述
+enable	boolean	false	是否启用该用户(true为启用)
+
+self_pass
+object
+false	本地密码(self_pass字段不为空时,表示要设置用户本地
+密码,此时password字段不能为空 password:表示本地
+密码 modify_once:初次认证是否修改密码)
+
+
+bind_cfg
+string
+array
+
+false	用户绑定,可同时添加多条。支持IP、 MAC、out_time:  绑定有效期（不需要时可去掉此条）、bindgoal:绑定方
+式（noauth：免认证，   loginlimit：限制登录，
+noauth_and_loginlimit：免认证且限制登录）、  desc:
+绑定描述
+custom_cfg	object	false	自定义属性的键值对
+logout	boolean	false	密码认证成功后是否弹出注销窗口
+
+common_user	object	false	enable:是否允许多人使用该账号登录 allow_change:是 否允许修改本地密码
+limit_ipmac	object	false	限制登录地址(IP或MAC,IP支持单个或IP段(192.168.1.1-
+192.168.1.2),MAC格式ee-ee-ee-ee-ee-ee)
+2.2 删除用户
+   请求地址: http://acip:9999/v1/user?_method=DELETE
+  功能: 删除已存在的某个用户
+  方法:   POST
+请求时携带的数据:
+
+{
+"name": "hello"
+}
+
+
+操作字段描述:
+
+字段名	类型	必填	描述
+name	string	true	用户名
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": "Delete user success!"
+}
+2.3 搜索用户
+   请求地址: http://acip:9999/v1/user?_method=GET
+  功能: 搜索用户,并返回用户详细信息
+  方法:   POST
+请求时携带的数据:
+
+{
+"search_type": "user",
+"search_value": "张三",
+"extend": {
+"custom_cfg": {
+"attr1": "value1"
+},
+"expire": {
+"start": "2018-05-01",
+"end": "2018-05-16"
+},
+"user_status": "all",
+"public": true,
+"father_path": "/"
+}
+}
+操作字段描述:
+
+字段名	类型	必选	描述
+search_type	string	true	搜索类型(支持user, ip, mac 3种类型)
+search_value	string或object	true	搜索的值(搜索类型及值类型见下表)
+extend	object	false	搜索用户扩展属性,可选
+search_type和search_value的对应关系:
+
+
+search_type	search_value 类型	示例	描述
+user	string	张三	用户名(支持模糊搜索)
+ip	object	{"start":"1.1.1.1", "end": "2.2.2.2"}	搜索用户绑定IP段(start:起始IP
+end:结束IP)
+mac	string	ee-ee-ee-ee-ee-ee	用户绑定mac地址
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": "多个用户的详细信息"
+}
+    注:返回结果格式与单个用户数据格式一致,见用户详细信息
+扩展支持的搜索用户属性:
+
+{
+"custom_cfg": {
+"attr1": "value1"
+},
+"expire": {
+"start": "2018-05-01",
+"end": "2018-05-16"
+},
+"user_status": "all",
+"public": true,
+"father_path":"/"
+}
+扩展字段描述:
+
+字段名	类型	必填	描述
+custom_cfg	object	false	自定义属性的键值对(不支持同时搜索多个自定义属性)
+expire	object	false	账号过期时间(start:起始时间 end:结束时间 start和end成
+对出现,组成时间段)
+
+user_status	string	false	用户状态(共有3种,all:启用和禁用 enabled:启用 disabled:
+禁用,默认为"all")
+public	boolean	false	true:搜索过滤出允许多人同时使用的帐号,默认为false
+father_path	boolean	false	指定搜索father_path组中的用户,默认为"/"
+
+
+2.4 修改用户信息
+   请求地址: http://acip:9999/v1/user?_method=PUT
+  功能: 修改已存在的某个用户信息,可同时修改多个用户属性
+  方法:   POST
+请求时携带的数据:
+
+{
+"name": "hello",
+"data": {
+"desc": "",
+"expire_time": "2018-01-10 00:00:00",
+"extend": {
+"father_path": "/hello/world",
+...
+}
+}
+}
+操作字段描述:
+
+字段名	类型	必填	描述
+name	string	true	要修改的用户名
+data	object	false	需要修改的用户相关信息
+支持修改的用户属性:
+注: 本接口亦支持2.1的所有扩展用户属性
+
+字段名	类型	必填	描述
+desc	string	false	用户描述
+
+expire_time
+string
+false	账号过期时间(永不过期:不定义expire_time字段或
+expire_time为空字符串 有过期时间:expire_time为具
+体日期("年-月- 日 时:分:秒")
+成功返回:
+
+扩展支持的用户属性:
+
+
+{
+"father_path": "/hello/world",
+"show_name": "show_name",
+"bind_cfg": [{
+"orig_mac": "ac-ed-ee-ee-ee-ee",
+"ip": "201.168.1.12",
+"mac": "ac-ed-ee-ee-ee-ee",
+"out_time": "2019-10-31",
+"bindgoal": "noauth_and_loginlimit",
+"desc":"example"
+}]
+}
+扩展字段描述:
+
+字段名	类型	必填	描述
+father_path	string	false	父组
+show_name	string	false	显示名
+
+bind_cfg
+object
+false	其中需要再加上orig_ip或orig_mac字段，来指示需要修改的
+用户绑定关系（使用哪个和之前的用户绑定关系中使用的绑
+定对象关联，都有以ip为准）。其余字段和2.1中添加用户时 对应扩展属性一致。
+2.5 获取用户详细信息
+   请求地址: http://acip:9999/v1/user?name=NAME
+  功能: 获取某个用户详细信息
+  方法:   GET
+操作字段描述:
+
+字段名	类型	必填	描述
+name	string	true	用户名
+成功返回:
+
+
+
+返回字段描述:
+
+
+字段名	类型	必填	描述
+enable	boolean	true	用户是否启用
+bind_cfg	string
+array
+true	用户IP,MAC绑定信息
+
+policy	object
+array
+true	用户关联的策略(具体到单条策略,name:策略名 status:
+策略是否启用 type:策略类型 founder:策略创建者
+expire:策略过期时间)
+self_pass	object
+true	enable:用户是否启用密码 modify_once:初次认证是否 修改秘密
+custom_cfg	object
+array
+true	用户自定义属性(具体到单条属性,name:属性名 value:属
+性值)
+create	string	true	用户创建者
+create_flag	boolean	true	用户是否由认证或者自动同步添加的
+desc	string	true	用户描述信息
+name	string	true	用户名
+show_name	string	true	用户显示名
+logout	boolean	true	密码认证成功后是否弹出注销窗口
+limit_ipmac	object
+true	用户限制登录信息(enable:是否开启限制登录 ipmac:具
+体的IP,MAC登录限制)
+
+common_user	object
+true	enable:是否允许多人同时使用该账号登录 allow_change:是否允许修改本地密码
+father_path	string	true	用户所在组
+expire_time	object
+true	enable:是否设置了用户过期时间 date:用户过期时间,只 有在enable为true时才有值
+2.6 用户关联上网策略
+   请求地址: http://acip:9999/v1/user/netpolicy
+  功能: 可对指定的用户,修改,添加或删除策略信息  （无dn字段，先搜索本地用户，再搜索域用户）
+  方法:   POST
+请求时携带的数据:
+
+
+操作字段描述:
+
+字段
+名	类型	必填	描述
+
+opr
+string
+true	操作字段(add:在原有策略上增加 del:在原有策略上删除( 无法删除
+应用所有用户的策略) modify:将策略设置为policy字段所指定的,会
+清除原有策略)
+user	string	true	需要修改策略的用户
+dn	string	false	域名
+policy	string
+array
+true	策略名(可通过3.1接口获取)
+成功返回:
+
+2.7 获取用户上网策略
+   请求地址: http://acip:9999/v1/user/netpolicy?user=NAME
+
+字段名	类型	必填	描述
+user	string	true	用户名
+dn	string	false	域名
+  功能: 获取某个用户关联的策略
+  方法:   GET
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": [
+"policy1",
+"policy2"
+]
+}
+返回字段说明：
+
+字段名	类型	描述
+data	string array	策略名数组
+
+
+2.8 用户关联流控策略
+   请求地址: http://acip:9999/v1/user/fluxpolicy
+  功能: 可对指定的用户,修改,添加或删除策略信息（无dn字段，先搜索本地用户，再搜索域用户）
+  方法:   POST
+请求时携带的数据:
+
+{
+"opr": "add",
+"user": "hello",
+"dn": "xxx.08r2.com",
+"policy": [
+"policy1",
+"policy2"
+]
+}
+操作字段描述:
+
+字段
+名	类型	必填	描述
+
+opr
+string
+true	操作字段(add:在原有策略上增加 del:在原有策略上删除(无法删除
+应用所有用户的策略，无法删除只应用单个用户的策略) modify:将
+策略设置为policy字段所指定的,会清除原有策略)
+user	string	true	需要修改策略的用户
+dn	string	false	域名
+policy	string
+array
+true	策略名(可通过5.1接口获取)
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": "Modify user fluxpolicy success!"
+}
+2.9 获取用户流控策略
+   请求地址: http://acip:9999/v1/user/fluxpolicy?user=NAME
+
+字段名	类型	必填	描述
+user	string	true	用户名
+dn	string	false	域名
+  功能: 获取某个用户关联的策略
+  方法:   GET
+成功返回:
+
+
+{
+"code": 0,
+"message": "Successfully",
+"data": [
+"policy1",
+"policy2"
+]
+}
+返回字段说明：
+
+字段名	类型	描述
+data	string array	策略名数组
+2.10 验证用户密码
+   请求地址: http://acip:9999/v1/user?_method=verify&name=NAME&password=PASSWORD
+
+参数	必选	描述
+_method	true	固定为verify
+name	true	用户名
+password	true	密码
+  功能: 验证本地用户名密码
+  方法:   GET
+成功返回:
+
+2.11 添加组
+   请求地址: http://acip:9999/v1/group
+  功能: 添加组,可同时设置组描述信息
+  方法:   POST
+请求时携带的数据:
+
+{
+"path": "/hello/world",
+"desc": "description"
+}
+操作字段描述:
+
+
+字段
+名	类型	必填	描述
+path	string
+true	要添加的组路径,最多支持15层级目录创建(以"/"开头,且不支持向域
+用户组添加组)
+desc	string	false	组描述
+成功返回:
+
+2.12 删除组
+   请求地址: http://acip:9999/v1/group?_method=DELETE
+  功能: 删除已存在的某个组
+  方法:   POST
+请求时携带的数据:
+
+{
+"path": "/hello/world"
+}
+操作字段描述:
+
+字段名	类型	必填	描述
+path	string	true	要删除的组名(以"/"开头)
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": "Delete group success!"
+}
+2.13 修改组信息
+   请求地址: http://acip:9999/v1/group?_method=PUT
+  功能: 修改已存在的某个组信息
+  方法:   POST
+请求时携带的数据:
+
+{
+"path": "/hello",
+"desc": "description"
+}
+
+
+操作字段描述:
+
+字段名	类型	必填	描述
+path	string	true	组名
+desc	string	true	组描述信息
+成功返回:
+
+{
+"code": 0,
+"data": "Modify group success!",
+"message": "Successfully"
+}
+2.14 组关联上网策略
+   请求地址: http://acip:9999/v1/group/netpolicy
+  功能: 可对指定的组,修改,添加或删除策略信息（无dn字段，先搜索本地组，再搜索域组）
+  方法:   POST
+请求时携带的数据:
+
+{
+"opr": "add",
+"group": "/hello",
+"dn": "xxx.08r2.com"
+"policy": [
+"policy1",
+"policy2"
+]
+}
+操作字段描述:
+
+字段
+名	类型	必填	描述
+
+opr
+string
+true	操作字段(add:在原有策略上增加 del:在原有策略上删除( 无法删除
+应用所有用户的策略) modify:将策略设置为policy字段所指定的,会
+清除原有策略)
+group	string	true	需要修改策略的组
+dn	string	false	域名
+policy	string
+array
+true	策略名(可通过3.1接口获取)
+成功返回:
+
+
+2.15 获取组关联上网策略
+   请求地址: http://acip:9999/v1/group/netpolicy?path=PATH
+
+字段名	类型	必填	描述
+path	string	true	组名(以"/"开头)
+dn	string	false	域名
+  功能: 获取某个组关联的策略
+  方法:   GET
+成功返回:
+
+{
+"code": 0,
+"message": "Successfully",
+"data": [
+"policy1",
+"policy2"
+]
+}
+3. 策略相关接口
+3.1 获取所有上网策略信息
+   请求地址: http://acip:9999/v1/policy/netpolicy
+  功能: 获取设备的已有策略信息
+  方法:   GET
+返回的数据:
+
+
+
+返回字段描述:
+
+字段名	类型	必填	描述
+name	string	true	策略名
+type	string	true	策略类型(上网权限,审计,准入等)
+founder	string	true	创建策略的角色(admin等)
+expire	string	true	过期时间
+status	boolean	true	启用或禁用状态
+depict	string	true	策略描述信息
+ou	string array	true	在线用户信息
+aduser	string array	true	域用户信息
+adgroup	string array	true	域安全组信息
+exc_aduser	string array	true	排除域用户信息
+attribute	string array	true	域属性信息
+user_attr_grp	string array	true	用户,组属性信息
+sourceip	string array	true	源IP
+location	string array	true	位置列表
+terminal	string array	true	终端列表
+target_area	string array	true	目标区域
+local	string	true	关联(适用)的用户
+
+
+3.2 获取所有流控策略信息
+   请求地址: http://acip:9999/v1/policy/fluxpolicy
+  功能: 获取设备的已有流控策略信息
+  方法:   GET
+返回的数据:
+
+{
+"code": 0, "message": "data": [{
+
+""
+,
+"name": "时延敏感型应用保障",
+"target_applications": "DNS,游戏 ,金融行情 ,金融交易 ,网络会议 ,ICMP,远程登录 ,
+网上银行",
+"target_users": "所有用户",
+"ip_group": "全部",
+"active_time": "全天",
+"line": "线路1",
+"assured_bandwidth": ["20000000", "20000000"],
+"max_bandwidth": ["100000000", "100000000"],
+"single_user_limit": ["-1", "-1"],
+"priority": "High",
+"policy_enable": true,
+"is_default_child": false,
+"is_low_speed": false,
+"children": [
+...
+]
+},
+...
+]
+}
+data字段为通道对象数组，通道对象字段描述:
+
+
+字段名	类型	必填	描述
+name	string	true	通道名
+target_applications	string	true	适用应用
+target_users	string	true	适用对象
+targetip_group	string	true	目标IP组
+active_time	boolean	true	生效时间
+assured_bandwidth	number
+array
+true	保证带宽，数组包含上行和下行，  -1表示无限 制
+max_bandwidth	number
+array
+true	最大带宽，数组包含上行和下行，  -1表示无限 制
+single_user_limit	number
+array
+true	单用户限制带宽，数组包含上行和下行，  -1表 示无限制
+policy_enable	boolean	true	策略是否启用，   true: 启用，  false:禁用
+is_default_child	boolean
+true	是否为默认通道，  true:是默认通道，  false: 不 是默认通道
+is_low_speed	string
+array
+true	域属性信息
+childrens	object
+array
+true	子通道对象数组，其对象与通道对象一致
+4. BindInfo接口
+4.1 查询用户和IP/MAC的绑定关系
+   请求地址: http://acip:9999/v1/bindinfo/user-bindinfo?search=VALUE
+
+参数	必选	描述
+search	true	支持按用户名、  IP、 MAC进行搜索。
+  方法：  GET
+成功时返回：
+
+{
+"code": 0,
+"message": "Success",
+"data": [{
+"enable": true,
+
+
+"desc":
+"name":
+"addr":
+
+
+
+
+,
+
+"addr_type": "ip",
+"time": "2018-05-14",
+"limitlogon": true,
+"noauth": {
+
+"enable": true,
+"indate": 0
+}
+}, {
+"enable": true,
+""
+,
+"a",
+"11-11-11-11-11-11"
+"addr_type": "mac",
+"time": "2018-05-14",
+"limitlogon": true,
+"noauth": {
+"enable": false,
+"indate": 0
+}
+}, {
+"enable": true,
+
+
+"desc": "name": "addr":
+
+
+
+,
+1.1.1+11-11-11-11-11-11"
+
+
+
+
+,
+
+"addr_type": "ipmac",
+"time": "2018-05-14",
+"limitlogon": true,
+"noauth": {
+"enable": false,
+"indate": 0
+}
+}
+]
+}
+
+data数组对象字段描述
+
+字段名	类型	描述
+enable	boolean	用户和IP/MAC绑定状态
+desc	string	描述信息
+name	string	用户名
+addr_type	string	指定绑定对象的类型，可选值为“ip”，“mac”或“ipmac”
+addr	string	绑定对象，当类型为“ipmac”时，格式为:“1.1.1.1+11-11-11-11-
+11-11”
+time	string	日期字符串，为绑定关系建立时间
+limitlogon	boolean	false:限制登录禁用，  true:限制登录启用
+noauth.enable	boolean	false:免认证禁用，   true:免认证启用
+noauth.indate	number	Unix时间戳，为0表示永不过期，  >0表示过期时间戳
+
+
+4.2 查询IPMAC绑定关系
+   请求地址: http://acip:9999/v1/ipmac-bindinfo?search=VALUE
+
+参数	必选	描述
+search	true	支持按IP、 MAC进行搜索
+  方法：  GET
+成功时返回：
+
+{
+"code": 0, "message": "data": {
+"desc": "mac":  "ip": "
+}
+}
+
+"Success",
+
+""
+,
+"11-11-11-11-11-11" 1.1.1.2"
+
+
+
+
+
+,
+data数组对象字段描述
+
+字段名	类型	描述
+ip	string	IP地址
+mac	string	MAC地址
+desc	string	描述信息
+4.3 删除用户和IP/MAC的绑定关系
+   请求地址: http://acip:9999/v1/bindinfo/user-bindinfo?_method=DELETE
+  方法：  POST
+请求时携带的数据:
+
+操作字段说明:
+
+参数	类型	必选	描述
+addr	string	true	绑定对象，可以为IP地址或MAC地址
+成功时返回：
+
+{
+"code": 0,
+"message": "Success"
+}
+
+
+4.4 删除IPMAC绑定信息
+   请求地址: http://acip:9999/v1/bindinfo/ipmac-bindinfo?_method=DELETE
+  方法：  POST
+请求时携带的数据:
+
+操作字段说明:
+
+参数	类型	必选	描述
+ip	string	true	IP地址
+成功时返回：
+
+{
+"code": 0,
+"message": "Success"
+}
+4.5 增加用户和IP/MAC的绑定关系
+   请求地址: http://acip:9999/v1/bindinfo/user-bindinfo
+  方法：  POST
+请求携带的参数：
+
+{
+"enable": "name": "desc":
+true
+"a",
+""
+,
+
+,
+"addr_type": "ip",
+"addr": "1.1.1.1",
+"limitlogon": true,
+"noauth": {
+"enable": false,
+"expire_time": 0
+}
+}
+
+
+
+{
+"enable": true,
+"name": "a",
+"desc": "",
+"addr_type": "ipmac",
+"addr": "1.1.1.1+11-11-11-11-11-11",
+"limitlogon": true,
+"noauth": {
+"enable": false,
+"expire_time": 0
+}
+}
+操作字段说明：
+
+字段名	类型	必选	描述
+enable	boolean	true	用户和IP/MAC绑定状态
+desc	string	false	描述信息
+name	string	true	用户名
+addr_type	string
+true	指定绑定对象的类型，可选值为“ip”，“mac”或
+“ipmac”
+addr	string
+true	绑定对象，当类型为“ipmac”时，格式为:
+“1.1.1.1+11-11-11-11-11-11”
+limitlogon	boolean	true	false:限制登录禁用，  true:限制登录启用
+noauth.enable	boolean	true	false:免认证禁用，   true:免认证启用
+noauth.expire_time	number
+true	Unix时间戳，为0表示永不过期，  >0表示过期时间 戳
+成功时返回：
+
+{
+"code": 0,
+"message": "Success"
+}
+4.6 增加IPMAC绑定信息
+   请求地址: http://acip:9999/v1/bindinfo/ipmac-bindinfo
+  方法：  POST
+请求携带的参数（字段意义与4.2一致）：
+
+{
+""
+,
+"11-11-11-11-11-11"
+1.1.1.2"
+}
+
+操作字段描述:
+
+字段名	类型	必选	描述
+ip	string	true	IP地址
+mac	string	true	MAC地址
+desc	string	false	描述信息
+成功时返回：
+
+5. OnlineUsers接口
+5.1 获取某用户的在线信息
+   请求地址: http://acip:9999/v1/online-users?_method=GET
+  功能：  获取当前设备的在线用户数
+  方法：  POST
+请求携带的参数：
+
+{
+"status": "all",
+"terminal": "all",
+"filter": {
+"type": "user",
+"value": ["a"]
+}
+}
+操作字段描述:
+
+字段名	类型	必填	描述
+
+status	string	false	用户状态， “all”：所有；  “frozen”：已冻结用户； “active”：活跃 用户
+
+terminal
+string
+false	终端类型， “all”:所有； “pc”: PC用户； “mobile”:移动终端用户；
+“multi”:多终端用户； “iot”:哑终端用户；  “armarium”:医疗设备 用户； “custom”:自定义设备用户
+filter	object	false	搜索条件，为空表示所有
+filtertype对象各字段描述
+
+
+字段
+名	类型	必填	描述
+
+type	string
+true	指定搜索类型， “user”：value为用户名数组；  ”ip“:value为IP地址数 组， ”mac“: value为MAC地址数组
+value	string
+array
+true	搜索对象，当type为”ip“时,value为数组对象，数组成员对象为ip地 址或者ip段
+成功返回：
+
+{
+"code": 0,
+"message": "Success",
+"data": {
+"count": 1,
+"users": [{
+"name": "a",
+"show_name": "a",
+"father_path": "\/default",
+"ip": "1.1.1.1",
+"mac": "11-11-11-11-11-11",
+"terminal": 2,
+"authway": 1,
+"login_time": 1526352600,
+"online_time": 8
+}
+]
+}
+}
+data对象各字段描述
+
+字段名	类型	描述
+count	number	符合条件的在线用户数
+users	object array	在线用户对象数组，最多返回100个用户
+users数组成员对象各字段描述
+
+
+字段名	类型	描述
+name	string	用户名
+show_name	string	显示名
+father_path	string	组路径
+ip	string	IP地址
+mac	string	MAC地址
+terminal	number	终端类型，  0为未识别，   1为移动终端，  2为PC ，3为共享终端，  4为 哑终端，  5为医疗设备，  7为自定义设备
+authway	number	认证方式，  0为不需要认证，  1为密码认证，  2为短信认证，  3为单点 登录， 4为免认证
+login_time	number	登录时间戳（Unix 时间戳）
+online_time	number	在线时长，单位秒
+5.2 强制注销在线用户
+   请求地址: http://acip:9999/v1/online-users?_method=DELETE
+
+参数	必选	描述
+ip	true	用户IP地址
+  功能：  强制注销在线用户
+  方法：  POST
+请求携带的数据
+
+{
+"ip": "1.1.1.1"
+}
+操作字段说明
+
+参数	类型	必选	描述
+ip	string	true	用户IP地址
+成功返回：
+
+{
+"code": 0,
+"message": "Success"
+}
+
+
+5.3 上线在线用户（单点登录）
+   请求地址: http://acip:9999/v1/online-users
+  功能：上线在线用户
+  方法：  POST
+请求携带的参数：
+
+{
+"ip": "1.1.1.1",
+"name": "a",
+"show_name": "a",
+"group": "\/default",
+"mac": "11-11-11-11-11-11"
+}
+操作字段描述:
+
+字段名	类型	必填	描述
+ip	string	true	用户IP地址
+show_name	string	false	显示名
+group	string	false	组路径
+name	string	true	用户名
+mac	string	false	MAC地址
+成功返回：
+
+{
+"code": 0,
+"message": "Success"
+}
+四. 错误信息
+
+中文	英文
+只支持本地请求!	Need request from local!
+Restful配置更新成功!	Restful config updated!
+Restful配置更新失败!	Fail to update restful config!
+Restful服务未启用!	Restful service isn't enabled!
+请求的IP不在白名单!	IP of request isn't in whitelist!
+权限校验失败!	Permission check failed!
+未知错误,获取数据失败!	Unknow error, fail to acquiredata!
+
+
+五. 注意事项
+BBC中心端只支持以下接口:
+  用户/组相关接口
+  策略相关接口
