@@ -1,0 +1,12 @@
+# Python 3.12.3 离线依赖包
+# 经过验证，这些版本与Python 3.12.3完全兼容
+
+# 核心依赖包 - 主程序必需
+pandas>=2.1.0,<3.0.0    # 数据处理和Excel操作
+openpyxl>=3.1.0,<4.0.0  # Excel文件读写
+requests>=2.28.0,<3.0.0 # HTTP请求
+
+# 注意：以下标准库包无需安装
+# - os, sys, json, logging (Python标准库)
+# - hashlib, random, string, time (Python标准库)
+# - datetime, typing, uuid (Python标准库)
