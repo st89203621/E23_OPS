@@ -56,7 +56,9 @@ class UserFlowStatsProcessor:
         self.setup_logging()
         self.logger = logging.getLogger(__name__)
         self.all_user_data = []
+        self.all_device_data = []  # 存储设备级别流速数据
         self.station_names = {}  # 存储局点名称映射
+        self.device_info_map = {}  # 存储设备信息映射
         self.used_randoms = set()  # 存储已使用的random值，防止重复
         
     def setup_logging(self):
@@ -124,6 +126,24 @@ class UserFlowStatsProcessor:
         self.logger.debug(f"MD5计算: '{shared_secret}' + '{random_str}' = '{combined_str}' -> {md5_hash}")
         return md5_hash
 
+    def map_machine_room_name(self, original_name: str) -> str:
+        """
+        将机房名称映射为代号
+
+        Args:
+            original_name: 原始机房名称
+
+        Returns:
+            映射后的机房代号
+        """
+        # 使用配置中的映射关系
+        mapped_name = config.MACHINE_ROOM_MAPPING.get(original_name, original_name)
+
+        if mapped_name != original_name:
+            self.logger.debug(f"机房名称映射: '{original_name}' -> '{mapped_name}'")
+
+        return mapped_name
+
     def get_auth_params(self) -> Dict[str, str]:
         """
         获取API认证参数
@@ -162,12 +182,12 @@ class UserFlowStatsProcessor:
             self.logger.warning(f"流速单位转换失败: {str(e)}")
             return 0.0
 
-    def save_to_database(self, data: List[Dict[str, Any]]) -> bool:
+    def save_user_data_to_database(self, data: List[Dict[str, Any]]) -> bool:
         """
-        将数据保存到MySQL数据库
+        将用户级别数据保存到MySQL数据库
 
         Args:
-            data: 要保存的数据列表
+            data: 要保存的用户数据列表
 
         Returns:
             是否保存成功
@@ -191,39 +211,39 @@ class UserFlowStatsProcessor:
 
             cursor = connection.cursor()
 
-            # 创建表（如果不存在）
+            # 创建用户级别表（如果不存在）
             create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS {config.DB_TABLE} (
+            CREATE TABLE IF NOT EXISTS {config.DB_USER_TABLE} (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                device_type VARCHAR(10) NOT NULL COMMENT '设备类型',
-                station_name VARCHAR(100) NOT NULL COMMENT '机房',
+                machine_room VARCHAR(100) NOT NULL COMMENT '机房',
                 device_ip VARCHAR(45) NOT NULL COMMENT '设备IP',
+                device_type VARCHAR(10) NOT NULL COMMENT '设备类型',
                 user_name VARCHAR(100) NOT NULL COMMENT '用户名',
                 user_ip VARCHAR(45) NOT NULL COMMENT 'IP',
-                up_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '上行流速Mb每s',
-                down_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '下行流速Mb每s',
-                total_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '总流速Mb每s',
+                up_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '上行Mbps',
+                down_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '下行Mbps',
+                total_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '总流速Mbps',
                 session_count INT NOT NULL DEFAULT 0 COMMENT '会话数',
                 record_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
                 INDEX idx_device_ip (device_ip),
                 INDEX idx_user_ip (user_ip),
-                INDEX idx_station_name (station_name),
+                INDEX idx_machine_room (machine_room),
                 INDEX idx_record_time (record_time),
                 INDEX idx_total_flow_rate (total_flow_rate)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='NF设备Top用户流速统计'
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='NF设备Top用户流速统计（用户级别）'
             """
 
             cursor.execute(create_table_sql)
-            self.logger.info(f"数据库表 {config.DB_TABLE} 准备完成")
+            self.logger.info(f"数据库表 {config.DB_USER_TABLE} 准备完成")
 
             # 清空当前数据（可选，避免重复数据）
-            cursor.execute(f"DELETE FROM {config.DB_TABLE} WHERE DATE(record_time) = CURDATE()")
-            self.logger.info("已清空今日数据，准备插入新数据")
+            cursor.execute(f"DELETE FROM {config.DB_USER_TABLE} WHERE DATE(record_time) = CURDATE()")
+            self.logger.info("已清空今日用户数据，准备插入新数据")
 
             # 插入数据
             insert_sql = f"""
-            INSERT INTO {config.DB_TABLE}
-            (device_type, station_name, device_ip, user_name, user_ip,
+            INSERT INTO {config.DB_USER_TABLE}
+            (machine_room, device_ip, device_type, user_name, user_ip,
              up_flow_rate, down_flow_rate, total_flow_rate, session_count)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
@@ -232,15 +252,15 @@ class UserFlowStatsProcessor:
             for record in data:
                 try:
                     values = (
-                        record.get('device_type', 'Unknown'),
-                        record.get('machine_room', 'Unknown'),  # 使用机房而不是局点
-                        record.get('source_ip', ''),
-                        record.get('name', 'Unknown'),
-                        record.get('ip', ''),
-                        record.get('up_mbps', 0),
-                        record.get('down_mbps', 0),
-                        record.get('total_mbps', 0),
-                        record.get('session', 0)
+                        record.get('machine_room', 'Unknown'),  # 机房
+                        record.get('source_ip', ''),           # 设备IP
+                        record.get('device_type', 'Unknown'),  # 设备类型
+                        record.get('name', 'Unknown'),         # 用户名
+                        record.get('ip', ''),                  # IP
+                        record.get('up_mbps', 0),              # 上行Mbps
+                        record.get('down_mbps', 0),            # 下行Mbps
+                        record.get('total_mbps', 0),           # 总流速Mbps
+                        record.get('session', 0)               # 会话数
                     )
 
                     cursor.execute(insert_sql, values)
@@ -256,7 +276,96 @@ class UserFlowStatsProcessor:
             return True
 
         except Exception as e:
-            self.logger.error(f"数据库保存失败: {str(e)}")
+            self.logger.error(f"用户数据库保存失败: {str(e)}")
+            return False
+
+    def save_device_data_to_database(self, data: List[Dict[str, Any]]) -> bool:
+        """
+        将设备级别数据保存到MySQL数据库
+
+        Args:
+            data: 要保存的设备数据列表
+
+        Returns:
+            是否保存成功
+        """
+        if not DB_AVAILABLE:
+            self.logger.warning("数据库功能不可用，跳过设备数据库保存")
+            return False
+
+        try:
+            self.logger.info("开始连接数据库保存设备数据...")
+
+            # 连接数据库
+            connection = pymysql.connect(
+                host=config.DB_HOST,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                database=config.DB_NAME,
+                charset='utf8mb4',
+                autocommit=True
+            )
+
+            cursor = connection.cursor()
+
+            # 创建设备级别表（如果不存在）
+            create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS {config.DB_DEVICE_TABLE} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                machine_room VARCHAR(100) NOT NULL COMMENT '机房',
+                device_ip VARCHAR(45) NOT NULL COMMENT '设备IP',
+                device_type VARCHAR(10) NOT NULL COMMENT '设备类型',
+                up_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '上行Mbps',
+                down_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '下行Mbps',
+                total_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '总流速Mbps',
+                record_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+                INDEX idx_device_ip (device_ip),
+                INDEX idx_machine_room (machine_room),
+                INDEX idx_record_time (record_time),
+                INDEX idx_total_flow_rate (total_flow_rate)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='NF设备流速统计（设备级别）'
+            """
+
+            cursor.execute(create_table_sql)
+            self.logger.info(f"数据库表 {config.DB_DEVICE_TABLE} 准备完成")
+
+            # 清空当前数据（可选，避免重复数据）
+            cursor.execute(f"DELETE FROM {config.DB_DEVICE_TABLE} WHERE DATE(record_time) = CURDATE()")
+            self.logger.info("已清空今日设备数据，准备插入新数据")
+
+            # 插入数据
+            insert_sql = f"""
+            INSERT INTO {config.DB_DEVICE_TABLE}
+            (machine_room, device_ip, device_type, up_flow_rate, down_flow_rate, total_flow_rate)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+
+            insert_count = 0
+            for record in data:
+                try:
+                    values = (
+                        record.get('machine_room', 'Unknown'),  # 机房
+                        record.get('device_ip', ''),           # 设备IP
+                        record.get('device_type', 'Unknown'),  # 设备类型
+                        record.get('up_mbps', 0),              # 上行Mbps
+                        record.get('down_mbps', 0),            # 下行Mbps
+                        record.get('total_mbps', 0)            # 总流速Mbps
+                    )
+
+                    cursor.execute(insert_sql, values)
+                    insert_count += 1
+
+                except Exception as e:
+                    self.logger.warning(f"插入设备记录失败: {str(e)}")
+                    continue
+
+            connection.close()
+
+            self.logger.info(f"成功保存 {insert_count} 条设备记录到数据库")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"设备数据库保存失败: {str(e)}")
             return False
 
     def convert_flow_rate_unit(self, bytes_per_second: float) -> Dict[str, Any]:
@@ -357,8 +466,16 @@ class UserFlowStatsProcessor:
 
                     config_data.append(device_config)
 
+                    # 映射机房名称为代号
+                    machine_room_code = self.map_machine_room_name(device_config['machine_room'])
+
                     # 存储IP到设备信息的映射
                     self.station_names[ip_str] = station_str
+                    self.device_info_map[ip_str] = {
+                        'station_name': station_str,
+                        'device_type': device_config['device_type'],
+                        'machine_room': machine_room_code  # 使用映射后的代号
+                    }
 
             self.logger.info(f"成功读取 {len(config_data)} 条配置记录")
             return config_data
@@ -367,7 +484,7 @@ class UserFlowStatsProcessor:
             self.logger.error(f"读取Excel配置文件失败: {str(e)}")
             raise
     
-    def call_api(self, ip_address: str) -> Optional[List[Dict[str, Any]]]:
+    def call_user_api(self, ip_address: str) -> Optional[List[Dict[str, Any]]]:
         """
         调用API获取用户流量数据
 
@@ -379,23 +496,23 @@ class UserFlowStatsProcessor:
         """
         for attempt in range(config.MAX_RETRIES):
             try:
-                self.logger.debug(f"向 {ip_address} 发送API请求 (尝试 {attempt + 1}/{config.MAX_RETRIES})")
+                self.logger.debug(f"向 {ip_address} 发送用户API请求 (尝试 {attempt + 1}/{config.MAX_RETRIES})")
 
                 # 获取认证参数
                 auth_params = self.get_auth_params()
 
                 # 构建URL，将认证参数放在查询参数中
-                url = f"http://{ip_address}:{config.API_PORT}{config.API_ENDPOINT}?_method=GET&random={auth_params['random']}&md5={auth_params['md5']}"
+                url = f"http://{ip_address}:{config.API_PORT}{config.USER_API_ENDPOINT}?_method=GET&random={auth_params['random']}&md5={auth_params['md5']}"
 
                 # 构建请求体，只包含业务参数
-                request_payload = config.API_PAYLOAD
+                request_payload = config.USER_API_PAYLOAD
 
                 self.logger.debug(f"请求URL: {url}")
                 self.logger.debug(f"请求体: {json.dumps(request_payload, ensure_ascii=False)}")
 
                 response = requests.post(
                     url,
-                    headers=config.API_HEADERS,
+                    headers=config.USER_API_HEADERS,
                     json=request_payload,
                     timeout=config.REQUEST_TIMEOUT
                 )
@@ -450,7 +567,98 @@ class UserFlowStatsProcessor:
                 self.logger.error(f"API请求异常，IP: {ip_address}, 错误: {str(e)}")
                 break
         
-        self.logger.error(f"API请求最终失败，IP: {ip_address}")
+        self.logger.error(f"用户API请求最终失败，IP: {ip_address}")
+        return None
+
+    def call_device_api(self, ip_address: str) -> Optional[Dict[str, Any]]:
+        """
+        调用API获取设备级别流速数据
+
+        Args:
+            ip_address: 设备IP地址
+
+        Returns:
+            设备流速数据字典，失败时返回None
+        """
+        for attempt in range(config.MAX_RETRIES):
+            try:
+                self.logger.debug(f"向 {ip_address} 发送设备API请求 (尝试 {attempt + 1}/{config.MAX_RETRIES})")
+
+                # 获取认证参数
+                auth_params = self.get_auth_params()
+
+                # 构建URL，将认证参数放在查询参数中
+                url = f"http://{ip_address}:{config.API_PORT}{config.DEVICE_API_ENDPOINT}?_method=GET&random={auth_params['random']}&md5={auth_params['md5']}"
+
+                # 构建请求体，只包含业务参数
+                request_payload = config.DEVICE_API_PAYLOAD
+
+                self.logger.debug(f"设备API请求URL: {url}")
+                self.logger.debug(f"设备API请求体: {json.dumps(request_payload, ensure_ascii=False)}")
+
+                response = requests.post(
+                    url,
+                    headers=config.DEVICE_API_HEADERS,
+                    json=request_payload,
+                    timeout=config.REQUEST_TIMEOUT
+                )
+
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        if 'data' in data and isinstance(data['data'], dict):
+                            device_data = data['data']
+                            self.logger.info(f"从 {ip_address} 获取到设备流速数据")
+
+                            # 获取设备信息
+                            device_info = self.device_info_map.get(ip_address, {})
+
+                            # 构建设备流速记录
+                            device_record = {
+                                'device_ip': ip_address,
+                                'machine_room': device_info.get('machine_room', 'Unknown'),
+                                'device_type': device_info.get('device_type', 'Unknown'),
+                                'up_bytes': device_data.get('send', 0),  # 上行流速 B/s
+                                'down_bytes': device_data.get('recv', 0),  # 下行流速 B/s
+                                'unit': device_data.get('unit', 'bytes')
+                            }
+
+                            # 转换流速单位从B/s到Mb/s
+                            if config.CONVERT_TO_MBPS:
+                                device_record['up_mbps'] = self.convert_bytes_to_mbps(float(device_record['up_bytes']))
+                                device_record['down_mbps'] = self.convert_bytes_to_mbps(float(device_record['down_bytes']))
+                                device_record['total_mbps'] = device_record['up_mbps'] + device_record['down_mbps']
+
+                            return device_record
+                        else:
+                            self.logger.warning(f"设备API响应格式异常，IP: {ip_address}, 响应: {data}")
+                            return None
+                    except json.JSONDecodeError:
+                        self.logger.warning(f"设备API响应JSON解析失败，IP: {ip_address}")
+                        return None
+                elif response.status_code == 401:
+                    self.logger.error(f"设备API认证失败，IP: {ip_address}, 请检查共享密钥配置")
+                    return None
+                elif response.status_code == 403:
+                    self.logger.error(f"设备API访问被拒绝，IP: {ip_address}, 可能是认证参数错误")
+                    return None
+                else:
+                    self.logger.warning(f"设备API请求失败，IP: {ip_address}, 状态码: {response.status_code}")
+                    try:
+                        error_data = response.json()
+                        self.logger.warning(f"错误详情: {error_data}")
+                    except:
+                        self.logger.warning(f"响应内容: {response.text[:200]}")
+
+            except requests.exceptions.Timeout:
+                self.logger.warning(f"设备API请求超时，IP: {ip_address} (尝试 {attempt + 1}/{config.MAX_RETRIES})")
+            except requests.exceptions.ConnectionError:
+                self.logger.warning(f"设备API连接失败，IP: {ip_address} (尝试 {attempt + 1}/{config.MAX_RETRIES})")
+            except Exception as e:
+                self.logger.error(f"设备API请求异常，IP: {ip_address}, 错误: {str(e)}")
+                break
+
+        self.logger.error(f"设备API请求最终失败，IP: {ip_address}")
         return None
 
     def process_user_data_by_device(self, all_data: List[Dict[str, Any]], config_data: List[Dict[str, str]]) -> Dict[str, List[Dict[str, Any]]]:
@@ -490,9 +698,13 @@ class UserFlowStatsProcessor:
             # 创建设备信息映射（设备类型和机房）
             device_info_map = {}
             for device in config_data:
+                # 映射机房名称为代号
+                original_machine_room = device.get('machine_room', 'Unknown')
+                machine_room_code = self.map_machine_room_name(original_machine_room)
+
                 device_info_map[device['ip_address']] = {
                     'device_type': device.get('device_type', 'Unknown'),
-                    'machine_room': device.get('machine_room', 'Unknown')
+                    'machine_room': machine_room_code  # 使用映射后的代号
                 }
 
             # 按设备分组处理，然后按机房重新组织
@@ -548,112 +760,226 @@ class UserFlowStatsProcessor:
             self.logger.error(f"处理用户数据失败: {str(e)}")
             raise
 
-    def create_output_excel(self, machine_room_data: Dict[str, List[Dict[str, Any]]], output_path: str):
+    def create_output_excel(self, machine_room_data: Dict[str, List[Dict[str, Any]]], device_data: List[Dict[str, Any]], output_path: str):
         """
-        创建输出Excel文件，按机房分组到不同工作表
+        创建输出Excel文件，包含5个sheet页：流速（设备级别）、A2、A3、B1、C1（用户级别）
 
         Args:
             machine_room_data: 按机房分组的用户数据字典
+            device_data: 设备级别流速数据列表
             output_path: 输出文件路径
         """
         try:
             self.logger.info(f"开始创建Excel文件: {output_path}")
 
-            if not machine_room_data:
+            if not machine_room_data and not device_data:
                 self.logger.warning("没有数据可写入Excel文件")
                 return
 
-            # 定义输出列和中文表头（只保留需要的9个字段）
-            column_mapping = {
-                'device_type': '设备类型',      # 1. 设备类型
-                'machine_room': '机房',        # 2. 机房
-                'source_ip': '设备IP',         # 3. 设备IP
-                'name': '用户名',              # 4. 用户名
-                'ip': 'IP',                   # 5. IP
-                'up_mbps': '上行Mb每s',        # 6. 上行Mb每s
-                'down_mbps': '下行Mb每s',      # 7. 下行Mb每s
-                'total_mbps': '总流速Mb每s',   # 8. 总流速Mb每s
-                'session': '会话数'            # 9. 会话数
-            }
-
-            # 按您要求的列顺序（只要这9个字段）
-            desired_order = [
-                'device_type',      # 1. 设备类型
-                'machine_room',     # 2. 机房
-                'source_ip',        # 3. 设备IP
-                'name',             # 4. 用户名
-                'ip',               # 5. IP
-                'up_mbps',          # 6. 上行Mb每s
-                'down_mbps',        # 7. 下行Mb每s
-                'total_mbps',       # 8. 总流速Mb每s
-                'session'           # 9. 会话数
-            ]
-
-            # 写入Excel文件，每个局点一个工作表
+            # 写入Excel文件，包含5个sheet页
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
 
-                for machine_room_name, user_data in machine_room_data.items():
-                    if not user_data:
-                        continue
+                # 1. 创建设备级别流速sheet页
+                if device_data:
+                    self.create_device_flow_sheet(writer, device_data)
 
-                    # 创建DataFrame
-                    df = pd.DataFrame(user_data)
+                # 2. 创建用户级别sheet页（A2、A3、B1、C1）
+                self.create_user_flow_sheets(writer, machine_room_data)
 
-                    # 只选择需要的9个字段，按指定顺序
-                    output_columns = []
-                    output_headers = []
-
-                    # 严格按照desired_order添加列，不添加其他列
-                    for col in desired_order:
-                        if col in df.columns:
-                            output_columns.append(col)
-                            output_headers.append(column_mapping[col])
-
-                    # 选择输出列
-                    output_df = df[output_columns].copy()
-                    output_df.columns = output_headers
-
-                    # 格式化数值列（不要括号和斜杠）
-                    numeric_columns = ['上行Mb每s', '下行Mb每s', '总流速Mb每s']
-                    for col in numeric_columns:
-                        if col in output_df.columns:
-                            output_df[col] = pd.to_numeric(output_df[col], errors='coerce')
-                            output_df[col] = output_df[col].round(3)  # Mb/s保留3位小数
-
-                    # 清理工作表名称（Excel工作表名称限制）
-                    sheet_name = machine_room_name.replace('/', '_').replace('\\', '_')[:31]
-
-                    # 写入工作表
-                    output_df.to_excel(
-                        writer,
-                        sheet_name=sheet_name,
-                        index=False,
-                        startrow=0
-                    )
-
-                    # 获取工作表对象进行格式化
-                    worksheet = writer.sheets[sheet_name]
-
-                    # 调整列宽
-                    for column in worksheet.columns:
-                        max_length = 0
-                        column_letter = column[0].column_letter
-                        for cell in column:
-                            try:
-                                if len(str(cell.value)) > max_length:
-                                    max_length = len(str(cell.value))
-                            except:
-                                pass
-                        adjusted_width = min(max_length + 2, 30)
-                        worksheet.column_dimensions[column_letter].width = adjusted_width
-
-                    self.logger.info(f"工作表 '{sheet_name}' 创建成功，包含 {len(output_df)} 条记录")
-
-            self.logger.info(f"Excel文件创建成功: {output_path}，包含 {len(machine_room_data)} 个机房工作表")
+            self.logger.info(f"Excel文件创建成功: {output_path}")
 
         except Exception as e:
             self.logger.error(f"创建Excel文件失败: {str(e)}")
             raise
+
+    def create_device_flow_sheet(self, writer, device_data: List[Dict[str, Any]]):
+        """
+        创建设备级别流速sheet页
+
+        Args:
+            writer: Excel writer对象
+            device_data: 设备流速数据列表
+        """
+        try:
+            self.logger.info("创建设备级别流速sheet页")
+
+            if not device_data:
+                self.logger.warning("没有设备流速数据")
+                return
+
+            # 创建DataFrame
+            df = pd.DataFrame(device_data)
+
+            # 定义设备级别输出列和中文表头
+            device_column_mapping = {
+                'machine_room': '机房',
+                'device_ip': '设备IP',
+                'device_type': '设备类型',
+                'up_mbps': '上行Mbps',
+                'down_mbps': '下行Mbps',
+                'total_mbps': '总流速Mbps'
+            }
+
+            # 按指定顺序
+            device_desired_order = [
+                'machine_room',   # 机房
+                'device_ip',      # 设备IP
+                'device_type',    # 设备类型
+                'up_mbps',        # 上行Mbps
+                'down_mbps',      # 下行Mbps
+                'total_mbps'      # 总流速Mbps
+            ]
+
+            # 选择输出列
+            output_columns = []
+            output_headers = []
+            for col in device_desired_order:
+                if col in df.columns:
+                    output_columns.append(col)
+                    output_headers.append(device_column_mapping[col])
+
+            output_df = df[output_columns].copy()
+            output_df.columns = output_headers
+
+            # 格式化数值列
+            numeric_columns = ['上行Mbps', '下行Mbps', '总流速Mbps']
+            for col in numeric_columns:
+                if col in output_df.columns:
+                    output_df[col] = pd.to_numeric(output_df[col], errors='coerce')
+                    output_df[col] = output_df[col].round(3)
+
+            # 写入工作表
+            output_df.to_excel(
+                writer,
+                sheet_name='流速',
+                index=False,
+                startrow=0
+            )
+
+            # 获取工作表对象进行格式化
+            worksheet = writer.sheets['流速']
+            self.format_worksheet(worksheet)
+
+            self.logger.info(f"设备流速sheet页创建成功，包含 {len(output_df)} 条记录")
+
+        except Exception as e:
+            self.logger.error(f"创建设备流速sheet页失败: {str(e)}")
+            raise
+
+    def create_user_flow_sheets(self, writer, machine_room_data: Dict[str, List[Dict[str, Any]]]):
+        """
+        创建用户级别流速sheet页（A2、A3、B1、C1）
+
+        Args:
+            writer: Excel writer对象
+            machine_room_data: 按机房分组的用户数据字典
+        """
+        try:
+            self.logger.info("创建用户级别流速sheet页")
+
+            # 定义用户级别输出列和中文表头
+            user_column_mapping = {
+                'machine_room': '机房',
+                'source_ip': '设备IP',
+                'device_type': '设备类型',
+                'name': '用户名',
+                'ip': 'IP',
+                'up_mbps': '上行Mbps',
+                'down_mbps': '下行Mbps',
+                'total_mbps': '总流速Mbps',
+                'session': '会话数'
+            }
+
+            # 按指定顺序
+            user_desired_order = [
+                'machine_room',   # 机房
+                'source_ip',      # 设备IP
+                'device_type',    # 设备类型
+                'name',           # 用户名
+                'ip',             # IP
+                'up_mbps',        # 上行Mbps
+                'down_mbps',      # 下行Mbps
+                'total_mbps',     # 总流速Mbps
+                'session'         # 会话数
+            ]
+
+            # 定义机房代号映射（现在数据中已经是代号了）
+            room_sheet_mapping = {
+                'A2': 'A2',
+                'A3': 'A3',
+                'B1': 'B1',
+                'C1': 'C1'
+            }
+
+            # 为每个机房创建sheet页
+            for machine_room_name, user_data in machine_room_data.items():
+                if not user_data:
+                    continue
+
+                # 确定sheet名称
+                sheet_name = room_sheet_mapping.get(machine_room_name, machine_room_name)
+
+                # 创建DataFrame
+                df = pd.DataFrame(user_data)
+
+                # 选择输出列
+                output_columns = []
+                output_headers = []
+                for col in user_desired_order:
+                    if col in df.columns:
+                        output_columns.append(col)
+                        output_headers.append(user_column_mapping[col])
+
+                output_df = df[output_columns].copy()
+                output_df.columns = output_headers
+
+                # 格式化数值列
+                numeric_columns = ['上行Mbps', '下行Mbps', '总流速Mbps']
+                for col in numeric_columns:
+                    if col in output_df.columns:
+                        output_df[col] = pd.to_numeric(output_df[col], errors='coerce')
+                        output_df[col] = output_df[col].round(3)
+
+                # 写入工作表
+                output_df.to_excel(
+                    writer,
+                    sheet_name=sheet_name,
+                    index=False,
+                    startrow=0
+                )
+
+                # 获取工作表对象进行格式化
+                worksheet = writer.sheets[sheet_name]
+                self.format_worksheet(worksheet)
+
+                self.logger.info(f"用户流速sheet页 '{sheet_name}' 创建成功，包含 {len(output_df)} 条记录")
+
+        except Exception as e:
+            self.logger.error(f"创建用户流速sheet页失败: {str(e)}")
+            raise
+
+    def format_worksheet(self, worksheet):
+        """
+        格式化工作表（调整列宽）
+
+        Args:
+            worksheet: 工作表对象
+        """
+        try:
+            # 调整列宽
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 30)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+        except Exception as e:
+            self.logger.warning(f"格式化工作表失败: {str(e)}")
 
     def run(self):
         """运行主流程"""
@@ -672,8 +998,9 @@ class UserFlowStatsProcessor:
                 raise ValueError("没有读取到有效的配置数据")
 
             # 2. 调用API获取数据
-            self.logger.info("开始调用API获取用户流量数据...")
+            self.logger.info("开始调用API获取用户和设备流量数据...")
             all_user_data = []
+            all_device_data = []
 
             for i, config_item in enumerate(config_data, 1):
                 station_name = config_item['station_name']
@@ -681,51 +1008,75 @@ class UserFlowStatsProcessor:
 
                 self.logger.info(f"处理第 {i}/{len(config_data)} 个设备: {station_name} ({ip_address})")
 
-                user_data = self.call_api(ip_address)
+                # 获取用户级别数据
+                user_data = self.call_user_api(ip_address)
                 if user_data:
                     all_user_data.extend(user_data)
                     self.logger.info(f"从 {station_name} 获取到 {len(user_data)} 条用户数据")
                 else:
-                    self.logger.warning(f"从 {station_name} 未获取到数据")
+                    self.logger.warning(f"从 {station_name} 未获取到用户数据")
 
-            self.logger.info(f"API调用完成，总计获取 {len(all_user_data)} 条用户数据")
+                # 获取设备级别数据
+                device_data = self.call_device_api(ip_address)
+                if device_data:
+                    all_device_data.append(device_data)
+                    self.logger.info(f"从 {station_name} 获取到设备流速数据")
+                else:
+                    self.logger.warning(f"从 {station_name} 未获取到设备数据")
+
+            self.logger.info(f"API调用完成，总计获取 {len(all_user_data)} 条用户数据，{len(all_device_data)} 条设备数据")
 
             # 3. 处理数据
-            if not all_user_data:
-                self.logger.warning("没有获取到任何用户数据，程序结束")
+            if not all_user_data and not all_device_data:
+                self.logger.warning("没有获取到任何数据，程序结束")
                 return
 
-            machine_room_grouped_data = self.process_user_data_by_device(all_user_data, config_data)
+            # 处理用户数据
+            machine_room_grouped_data = {}
+            if all_user_data:
+                machine_room_grouped_data = self.process_user_data_by_device(all_user_data, config_data)
 
             # 4. 生成输出
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
             # 4.1 输出到Excel（如果启用）
             if config.OUTPUT_TO_EXCEL:
-                output_filename = f"各机房Top{config.TOP_N_USERS_PER_DEVICE}用户流速统计_{timestamp}.xlsx"
+                output_filename = config.OUTPUT_FILENAME_TEMPLATE.format(
+                    top_n=config.TOP_N_USERS_PER_DEVICE,
+                    timestamp=timestamp
+                )
                 output_path = os.path.join(config.OUTPUT_DIR, output_filename)
-                self.create_output_excel(machine_room_grouped_data, output_path)
+                self.create_output_excel(machine_room_grouped_data, all_device_data, output_path)
                 self.logger.info(f"Excel文件保存完成: {output_path}")
 
             # 4.2 输出到数据库（如果启用）
             if config.OUTPUT_TO_DATABASE:
-                # 将分组数据展平为列表
-                all_users = []
-                for machine_room_users in machine_room_grouped_data.values():
-                    all_users.extend(machine_room_users)
+                # 保存用户数据
+                if machine_room_grouped_data:
+                    all_users = []
+                    for machine_room_users in machine_room_grouped_data.values():
+                        all_users.extend(machine_room_users)
 
-                if self.save_to_database(all_users):
-                    self.logger.info("数据库保存完成")
-                else:
-                    self.logger.warning("数据库保存失败")
+                    if self.save_user_data_to_database(all_users):
+                        self.logger.info("用户数据库保存完成")
+                    else:
+                        self.logger.warning("用户数据库保存失败")
+
+                # 保存设备数据
+                if all_device_data:
+                    if self.save_device_data_to_database(all_device_data):
+                        self.logger.info("设备数据库保存完成")
+                    else:
+                        self.logger.warning("设备数据库保存失败")
 
             # 5. 输出统计信息
-            total_users = sum(len(users) for users in machine_room_grouped_data.values())
+            total_users = sum(len(users) for users in machine_room_grouped_data.values()) if machine_room_grouped_data else 0
 
             self.logger.info("=" * 50)
             self.logger.info("处理完成统计信息:")
             self.logger.info(f"处理设备数量: {len(config_data)}")
             self.logger.info(f"获取用户总数: {len(all_user_data)}")
+            self.logger.info(f"获取设备总数: {len(all_device_data)}")
             self.logger.info(f"输出机房数量: {len(machine_room_grouped_data)}")
             self.logger.info(f"输出用户数量: {total_users}")
             self.logger.info(f"每设备Top用户数: {config.TOP_N_USERS_PER_DEVICE}")
@@ -736,20 +1087,32 @@ class UserFlowStatsProcessor:
             print(f"\n✅ 处理完成！")
             print(f"📊 处理了 {len(config_data)} 个设备")
             print(f"👥 获取了 {len(all_user_data)} 条用户流速数据")
+            print(f"🖥️  获取了 {len(all_device_data)} 条设备流速数据")
             print(f"🏢 输出 {len(machine_room_grouped_data)} 个机房")
             print(f"🏆 每设备输出前 {config.TOP_N_USERS_PER_DEVICE} 名用户，总计 {total_users} 名用户")
             if config.OUTPUT_TO_EXCEL:
                 print(f"📁 Excel文件: {output_path}")
             if config.OUTPUT_TO_DATABASE:
-                print(f"💾 数据库: {config.DB_HOST}/{config.DB_NAME}.{config.DB_TABLE}")
+                print(f"💾 用户数据库: {config.DB_HOST}/{config.DB_NAME}.{config.DB_USER_TABLE}")
+                print(f"💾 设备数据库: {config.DB_HOST}/{config.DB_NAME}.{config.DB_DEVICE_TABLE}")
             print(f"📏 流速单位: {config.OUTPUT_UNIT}")
 
             # 按机房统计输出信息
-            print(f"\n📋 各机房统计:")
-            for machine_room_name, users in machine_room_grouped_data.items():
-                device_count = len(set(user.get('source_ip') for user in users))
-                user_count = len(users)
-                print(f"   {machine_room_name}: {device_count}个设备, {user_count}个用户")
+            if machine_room_grouped_data:
+                print(f"\n📋 各机房统计:")
+                for machine_room_name, users in machine_room_grouped_data.items():
+                    device_count = len(set(user.get('source_ip') for user in users))
+                    user_count = len(users)
+                    print(f"   {machine_room_name}: {device_count}个设备, {user_count}个用户")
+
+            # 设备流速统计
+            if all_device_data:
+                print(f"\n🖥️  设备流速统计:")
+                for device in all_device_data:
+                    machine_room = device.get('machine_room', 'Unknown')
+                    device_ip = device.get('device_ip', 'Unknown')
+                    total_mbps = device.get('total_mbps', 0)
+                    print(f"   {machine_room} - {device_ip}: {total_mbps:.3f} Mbps")
 
         except Exception as e:
             self.logger.error(f"程序运行失败: {str(e)}")
