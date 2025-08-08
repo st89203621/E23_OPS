@@ -1,0 +1,180 @@
+# 数据质量监控配置文件
+
+# Hive数据库连接配置
+hive:
+  host: "172.16.80.12"
+  port: 10000
+  username: null
+  password: null
+  database: "v64_deye_dw_dwd"
+  auth: null
+
+# Elasticsearch连接配置
+elasticsearch:
+  host: "172.16.80.165"
+  port: 12000
+  timeout: 30
+
+# 输出配置
+output:
+  csv_directory: "./output"
+  log_directory: "./logs"
+
+# 日期配置
+date:
+  # 默认查询日期，如果为空则使用当前日期
+  default_query_date: ""
+  # 日期格式
+  date_format: "%Y-%m-%d"
+
+# 协议映射配置（完整的29个协议）
+protocols:
+  # 第一类：dwd_pr_开头的协议表（20个）
+  email:
+    hive_table: "dwd_pr_email_store"
+    es_index_pattern: "deye_v64_email_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  engine:
+    hive_table: "dwd_pr_engine_store"
+    es_index_pattern: "deye_v64_engine_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  entertainment:
+    hive_table: "dwd_pr_entertainment_store"
+    es_index_pattern: "deye_v64_entertainment_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  finance:
+    hive_table: "dwd_pr_finance_store"
+    es_index_pattern: "deye_v64_finance_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  ftp:
+    hive_table: "dwd_pr_ftp_store"
+    es_index_pattern: "deye_v64_ftp_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  http:
+    hive_table: "dwd_pr_http_store"
+    es_index_pattern: "deye_v64_http_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  im:
+    hive_table: "dwd_pr_im_store"
+    es_index_pattern: "deye_v64_im_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  lbs:
+    hive_table: "dwd_pr_lbs_store"
+    es_index_pattern: "deye_v64_lbs_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  multimedia:
+    hive_table: "dwd_pr_multimedia_store"
+    es_index_pattern: "deye_v64_multimedia_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  news:
+    hive_table: "dwd_pr_news_store"
+    es_index_pattern: "deye_v64_news_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  others:
+    hive_table: "dwd_pr_others_store"
+    es_index_pattern: "deye_v64_other_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  remotectrl:
+    hive_table: "dwd_pr_remotectrl_store"
+    es_index_pattern: "deye_v64_remotectrl_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  shopping:
+    hive_table: "dwd_pr_shopping_store"
+    es_index_pattern: "deye_v64_shopping_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  sns:
+    hive_table: "dwd_pr_sns_store"
+    es_index_pattern: "deye_v64_sns_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  telnet:
+    hive_table: "dwd_pr_telnet_store"
+    es_index_pattern: "deye_v64_telnet_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  terminal:
+    hive_table: "dwd_pr_terminal_store"
+    es_index_pattern: "deye_v64_terminal_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  tool:
+    hive_table: "dwd_pr_tool_store"
+    es_index_pattern: "deye_v64_tool_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  travel:
+    hive_table: "dwd_pr_travel_store"
+    es_index_pattern: "deye_v64_travel_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  voip:
+    hive_table: "dwd_pr_voip_store"
+    es_index_pattern: "deye_v64_voip_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  vpn:
+    hive_table: "dwd_pr_vpn_store"
+    es_index_pattern: "deye_v64_vpn_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  # 第二类：基础通信协议（3个）
+  call:
+    hive_table: "dwd_call_store"
+    es_index_pattern: "deye_v64_call_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  fax:
+    hive_table: "dwd_fax_store"
+    es_index_pattern: "deye_v64_fax_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  sms:
+    hive_table: "dwd_sms_store"
+    es_index_pattern: "deye_v64_sms_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  # 第三类：固网Radius协议（1个）
+  fixednetradius:
+    hive_table: "dwd_fixnet_radius_store"
+    es_index_pattern: "deye_v64_fixednetradius_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  # 第四类：移动网位置协议（2个）
+  location_mobilis:
+    hive_table: "dwd_mobilenet_location_mobilis_store"
+    es_index_pattern: "deye_v64_location_mobilis_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  location_ooredoo:
+    hive_table: "dwd_mobilenet_location_ooredoo_store"
+    es_index_pattern: "deye_v64_location_ooredoo_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  # 第五类：移动网Radius协议（3个）
+  mobilenetradius_djezzy:
+    hive_table: "dwd_mobile_radius_djezzy_store"
+    es_index_pattern: "deye_v64_mobilenetradius_djezzy_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  mobilenetradius_mobilis:
+    hive_table: "dwd_mobile_radius_mobilis_store"
+    es_index_pattern: "deye_v64_mobilenetradius_mobilis_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
+
+  mobilenetradius_ooredoo:
+    hive_table: "dwd_mobile_radius_ooredoo_store"
+    es_index_pattern: "deye_v64_mobilenetradius_ooredoo_{year}{month:02d}-*"
+    es_date_field: "capture_dayField"
