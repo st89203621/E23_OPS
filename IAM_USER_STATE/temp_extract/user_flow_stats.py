@@ -60,6 +60,8 @@ class UserFlowStatsProcessor:
         self.station_names = {}  # 存储局点名称映射
         self.device_info_map = {}  # 存储设备信息映射
         self.used_randoms = set()  # 存储已使用的random值，防止重复
+        # 生成批次时间（整分钟）
+        self.batch_time = self.generate_batch_time()
         
     def setup_logging(self):
         """设置日志"""
@@ -74,6 +76,20 @@ class UserFlowStatsProcessor:
                 )
             ]
         )
+
+    def generate_batch_time(self) -> str:
+        """
+        生成批次时间（整分钟）
+
+        Returns:
+            格式化的批次时间字符串 (YYYY-MM-DD HH:MM:00)
+        """
+        now = datetime.now()
+        # 将秒数和微秒数设为0，得到整分钟时间
+        batch_time = now.replace(second=0, microsecond=0)
+        batch_time_str = batch_time.strftime('%Y-%m-%d %H:%M:%S')
+        self.logger.info(f"生成批次时间: {batch_time_str}")
+        return batch_time_str
 
     def generate_random_string(self) -> str:
         """
@@ -236,16 +252,12 @@ class UserFlowStatsProcessor:
             cursor.execute(create_table_sql)
             self.logger.info(f"数据库表 {config.DB_USER_TABLE} 准备完成")
 
-            # 清空当前数据（可选，避免重复数据）
-            cursor.execute(f"DELETE FROM {config.DB_USER_TABLE} WHERE DATE(record_time) = CURDATE()")
-            self.logger.info("已清空今日用户数据，准备插入新数据")
-
-            # 插入数据
+            # 插入数据（使用批次时间）
             insert_sql = f"""
             INSERT INTO {config.DB_USER_TABLE}
             (machine_room, device_ip, device_type, user_name, user_ip,
-             up_flow_rate, down_flow_rate, total_flow_rate, session_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+             up_flow_rate, down_flow_rate, total_flow_rate, session_count, record_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
 
             insert_count = 0
@@ -260,7 +272,8 @@ class UserFlowStatsProcessor:
                         record.get('up_mbps', 0),              # 上行Mbps
                         record.get('down_mbps', 0),            # 下行Mbps
                         record.get('total_mbps', 0),           # 总流速Mbps
-                        record.get('session', 0)               # 会话数
+                        record.get('session', 0),              # 会话数
+                        self.batch_time                        # 批次时间
                     )
 
                     cursor.execute(insert_sql, values)
@@ -329,15 +342,11 @@ class UserFlowStatsProcessor:
             cursor.execute(create_table_sql)
             self.logger.info(f"数据库表 {config.DB_DEVICE_TABLE} 准备完成")
 
-            # 清空当前数据（可选，避免重复数据）
-            cursor.execute(f"DELETE FROM {config.DB_DEVICE_TABLE} WHERE DATE(record_time) = CURDATE()")
-            self.logger.info("已清空今日设备数据，准备插入新数据")
-
-            # 插入数据
+            # 插入数据（使用批次时间）
             insert_sql = f"""
             INSERT INTO {config.DB_DEVICE_TABLE}
-            (machine_room, device_ip, device_type, up_flow_rate, down_flow_rate, total_flow_rate)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            (machine_room, device_ip, device_type, up_flow_rate, down_flow_rate, total_flow_rate, record_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
 
             insert_count = 0
@@ -349,7 +358,8 @@ class UserFlowStatsProcessor:
                         record.get('device_type', 'Unknown'),  # 设备类型
                         record.get('up_mbps', 0),              # 上行Mbps
                         record.get('down_mbps', 0),            # 下行Mbps
-                        record.get('total_mbps', 0)            # 总流速Mbps
+                        record.get('total_mbps', 0),           # 总流速Mbps
+                        self.batch_time                        # 批次时间
                     )
 
                     cursor.execute(insert_sql, values)
