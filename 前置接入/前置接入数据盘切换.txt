@@ -24,6 +24,10 @@ mkdir -p /data2/pr-collect/upload
 /data1/daq/deye-pr-collect-master-1.4.3-SNAPSHOT/bin/semptian-master.sh restart
 /data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT/bin/semptian-task.sh restart
 
+关闭摆渡服务和压缩服务
+/data1/daq/deye-dataprotocol-file-compress-v6.2.3.6/bin/stop.sh
+/data1/daq/deye-dataprotocol-file-ferry-v6.2.3.4/bin/stop.sh
+
 启动摆渡服务和压缩服务
 /data1/daq/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
 /data1/daq/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
