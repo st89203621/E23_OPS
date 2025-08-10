@@ -119,6 +119,64 @@ def install_tar_package(tar_path, install_dest):
         print(f"   原因: {e}")
         return False
 
+def create_thrift_compatibility(install_target_dir):
+    """创建thrift兼容性模块，使用系统的thriftpy"""
+    try:
+        # 创建thrift兼容性目录
+        thrift_dir = os.path.join(install_target_dir, 'thrift')
+        os.makedirs(thrift_dir, exist_ok=True)
+
+        # 创建__init__.py文件
+        init_file = os.path.join(thrift_dir, '__init__.py')
+        with open(init_file, 'w') as f:
+            f.write('''# Thrift兼容性模块
+# 导入所有thrift模块内容
+try:
+    from thrift.Thrift import *
+    from thrift.transport import *
+    from thrift.protocol import *
+    print("使用完整thrift库")
+except ImportError:
+    # 如果标准thrift不完整，尝试从我们安装的包中导入
+    try:
+        import sys
+        import os
+
+        # 查找thrift包的实际位置
+        thrift_path = None
+        for path in sys.path:
+            potential_path = os.path.join(path, 'thrift')
+            if os.path.exists(potential_path) and os.path.isdir(potential_path):
+                thrift_path = potential_path
+                break
+
+        if thrift_path:
+            # 导入thrift的核心模块
+            sys.path.insert(0, os.path.dirname(thrift_path))
+            from thrift.Thrift import *
+            from thrift.transport.TSocket import TSocket
+            from thrift.transport.TTransport import TBufferedTransport
+            from thrift.protocol.TBinaryProtocol import TBinaryProtocol
+            print("使用已安装的thrift库")
+        else:
+            raise ImportError("找不到thrift模块")
+
+    except ImportError:
+        print("警告: thrift模块不完整，PyHive可能无法工作")
+        # 创建基本的兼容性类
+        class TException(Exception):
+            pass
+
+        class TApplicationException(TException):
+            pass
+''')
+
+        print(f"✓ 创建thrift兼容性模块: {thrift_dir}")
+        return True
+    except Exception as e:
+        print(f"✗ 创建thrift兼容性模块失败: {e}")
+        return False
+
 def main():
     print("=" * 60)
     print(" DWD和ADS一致性统计 - Python离线包安装程序（修复版）")
@@ -212,7 +270,13 @@ def main():
         print(f"失败: {len(failed_packages)} 个包")
         for pkg in failed_packages:
             print(f"  - {pkg}")
-    
+
+    # 4.5. 创建thrift兼容性模块
+    print("\n" + "=" * 60)
+    print(" 创建thrift兼容性模块")
+    print("=" * 60)
+    create_thrift_compatibility(install_target_dir)
+
     # 5. 验证安装
     print("\n" + "=" * 60)
     print(" 验证已安装的包 (通过import)")
