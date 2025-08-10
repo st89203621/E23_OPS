@@ -2,7 +2,7 @@
 Elasticsearch数据库连接和查询模块
 """
 from elasticsearch import Elasticsearch
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import logging
 from datetime import datetime
 
@@ -36,8 +36,8 @@ class ESClient:
         """
         try:
             self.client = Elasticsearch(
-                [{'host': self.host, 'port': self.port}],
-                timeout=self.timeout,
+                hosts=[f"http://{self.host}:{self.port}"],
+                request_timeout=self.timeout,
                 max_retries=3,
                 retry_on_timeout=True
             )
@@ -157,8 +157,8 @@ class ESClient:
             return None
     
     def get_es_metrics(self, index_pattern: str, query_date: str,
-                      date_field: str = "capture_dayField", 
-                      distinct_field: str = "data_id") -> tuple[Optional[int], Optional[int]]:
+                      date_field: str = "capture_dayField",
+                      distinct_field: str = "data_id") -> Tuple[Optional[int], Optional[int]]:
         """
         获取ES指标数据
         
