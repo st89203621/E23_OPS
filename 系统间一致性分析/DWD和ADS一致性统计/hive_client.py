@@ -157,37 +157,29 @@ class HiveClient:
             return results[0][0]
         return None
     
-    def get_hive_metrics(self, table_name: str, query_date: str, 
-                        date_field: str = "insert_day", 
-                        distinct_field: str = "data_id") -> Tuple[Optional[int], Optional[int]]:
+    def get_hive_metrics(self, table_name: str, query_date: str,
+                        date_field: str = "insert_day") -> Optional[int]:
         """
-        获取Hive指标数据
-        
+        获取Hive指标数据（仅总数）
+
         Args:
             table_name: 表名
             query_date: 查询日期
             date_field: 日期字段名
-            distinct_field: 去重字段名
-            
+
         Returns:
-            (总记录数, 去重后记录数) 的元组
+            总记录数
         """
         logger.info(f"开始查询Hive指标数据 - 表: {table_name}, 日期: {query_date}")
-        
+
         # 获取总记录数
         total_count = self.get_total_count(table_name, date_field, query_date)
         if total_count is None:
             logger.error(f"获取总记录数失败")
-            return None, None
-        
-        # 获取去重后记录数
-        distinct_count = self.get_distinct_count(table_name, distinct_field, date_field, query_date)
-        if distinct_count is None:
-            logger.error(f"获取去重后记录数失败")
-            return total_count, None
-        
-        logger.info(f"Hive指标查询完成 - 总记录数: {total_count}, 去重后记录数: {distinct_count}")
-        return total_count, distinct_count
+            return None
+
+        logger.info(f"Hive指标查询完成 - 总记录数: {total_count}")
+        return total_count
     
     def __enter__(self):
         """上下文管理器入口"""

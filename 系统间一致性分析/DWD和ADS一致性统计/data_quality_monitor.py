@@ -106,7 +106,8 @@ class DataQualityMonitor:
             'distinct_diff': None,
             'total_consistency_rate': None,
             'distinct_consistency_rate': None,
-            'status': 'FAILED'
+            'status': 'FAILED',
+            'error': None
         }
         
         try:
@@ -201,6 +202,9 @@ class DataQualityMonitor:
             
             result = self.compare_protocol_data(protocol_name, protocol_config, query_date)
             self.results.append(result)
+
+            # 每完成一个协议就输出结果
+            self._print_protocol_result(result, i, total_protocols)
         
         self.logger.info("数据一致性比较完成")
     
@@ -239,17 +243,39 @@ class DataQualityMonitor:
         except Exception as e:
             self.logger.error(f"保存结果文件失败: {e}")
     
+    def _print_protocol_result(self, result: Dict[str, Any], current: int, total: int) -> None:
+        """打印单个协议的结果"""
+        status_color = {
+            'GOOD': '\033[92m',      # 绿色
+            'WARNING': '\033[93m',   # 黄色
+            'ERROR': '\033[91m',     # 红色
+            'FAILED': '\033[91m'     # 红色
+        }
+        reset_color = '\033[0m'
+
+        color = status_color.get(result['status'], '')
+
+        print(f"\n[{current}/{total}] {color}{result['protocol'].upper()}{reset_color} - {color}{result['status']}{reset_color}")
+        print(f"  Hive: 总数={result['hive_total']:,}, 去重={result['hive_distinct']:,}")
+        print(f"  ES:   总数={result['es_total']:,}, 去重={result['es_distinct']:,}")
+
+        if result['status'] != 'FAILED':
+            print(f"  一致性: 总数={result['total_consistency_rate']:.1f}%, 去重={result['distinct_consistency_rate']:.1f}%")
+
+        if result['error']:
+            print(f"  错误: {result['error']}")
+
     def _print_summary(self) -> None:
         """打印统计摘要"""
         if not self.results:
             return
-        
+
         total_count = len(self.results)
         good_count = sum(1 for r in self.results if r['status'] == 'GOOD')
         warning_count = sum(1 for r in self.results if r['status'] == 'WARNING')
         error_count = sum(1 for r in self.results if r['status'] == 'ERROR')
         failed_count = sum(1 for r in self.results if r['status'] == 'FAILED')
-        
+
         print("\n" + "="*60)
         print("数据一致性统计摘要")
         print("="*60)

@@ -134,59 +134,51 @@ class ESClient:
                 "aggs": {
                     "distinct_count": {
                         "cardinality": {
-                            "field": distinct_field
+                            "field": distinct_field  # 直接使用字段名，因为data_idField已经是keyword类型
                         }
                     }
                 }
             }
-            
+
             logger.info(f"执行ES去重查询 - 索引: {index_pattern}, 去重字段: {distinct_field}")
-            
+
             # 执行查询
             response = self.client.search(
                 index=index_pattern,
                 body=query
             )
-            
+
             distinct_count = response['aggregations']['distinct_count']['value']
             logger.info(f"ES去重查询成功，返回去重文档数: {distinct_count}")
             return distinct_count
-        
+
         except Exception as e:
             logger.error(f"执行ES去重查询失败: {e}")
             return None
     
     def get_es_metrics(self, index_pattern: str, query_date: str,
-                      date_field: str = "capture_dayField",
-                      distinct_field: str = "data_id") -> Tuple[Optional[int], Optional[int]]:
+                      date_field: str = "capture_dayField") -> Optional[int]:
         """
-        获取ES指标数据
-        
+        获取ES指标数据（仅总数）
+
         Args:
             index_pattern: 索引模式
             query_date: 查询日期
             date_field: 日期字段名
-            distinct_field: 去重字段名
-            
+
         Returns:
-            (总文档数, 去重后文档数) 的元组
+            总文档数
         """
         logger.info(f"开始查询ES指标数据 - 索引: {index_pattern}, 日期: {query_date}")
-        
+
         # 获取总文档数
         total_count = self.get_total_count(index_pattern, date_field, query_date)
         if total_count is None:
             logger.error(f"获取总文档数失败")
-            return None, None
-        
-        # 获取去重后文档数
-        distinct_count = self.get_distinct_count(index_pattern, distinct_field, date_field, query_date)
-        if distinct_count is None:
-            logger.error(f"获取去重后文档数失败")
-            return total_count, None
-        
-        logger.info(f"ES指标查询完成 - 总文档数: {total_count}, 去重后文档数: {distinct_count}")
-        return total_count, distinct_count
+            return None
+
+        logger.info(f"ES指标查询完成 - 总文档数: {total_count}")
+        return total_count
     
     def __enter__(self):
         """上下文管理器入口"""
