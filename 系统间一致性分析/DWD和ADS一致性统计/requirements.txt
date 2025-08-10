@@ -1,0 +1,21 @@
+# DWD和ADS一致性统计所需的Python包
+# 使用方法: pip download -r requirements.txt --dest ./packages/
+
+# 核心依赖
+PyYAML>=5.4.0
+elasticsearch>=7.0.0,<8.0.0
+
+# PyHive及其依赖
+PyHive>=0.6.0
+thrift>=0.13.0
+sasl>=0.3.1
+thrift-sasl>=0.4.0
+pure-sasl>=0.6.0
+
+# 通用依赖
+six>=1.15.0
+future>=0.18.0
+
+# 可选依赖（用于更好的兼容性）
+setuptools>=40.0.0
+wheel>=0.35.0

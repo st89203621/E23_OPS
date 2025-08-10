@@ -1,0 +1,87 @@
+# DWD和ADS一致性统计 - 手动下载Python包指南
+
+由于当前环境没有Python，请在有Python环境的机器上执行以下命令来下载包：
+
+## 方法1：使用下载脚本（推荐）
+```bash
+# 在有Python的环境中执行
+cd offline_packages
+python3 download_packages.py
+```
+
+## 方法2：使用pip命令手动下载
+```bash
+cd offline_packages
+
+# 下载所有需要的包
+pip download PyYAML --dest .
+pip download PyHive --dest .
+pip download "elasticsearch<9.0.0" --dest .
+pip download thrift --dest .
+pip download sasl --dest .
+pip download pure-sasl --dest .
+pip download six --dest .
+pip download setuptools --dest .
+pip download wheel --dest .
+pip download urllib3 --dest .
+pip download certifi --dest .
+pip download elastic-transport --dest .
+pip download thrift-sasl --dest .
+```
+
+## 方法3：一次性下载所有包
+```bash
+cd offline_packages
+
+# 使用requirements文件下载
+pip download -r requirements-offline.txt --dest .
+
+# 或者一行命令下载所有包
+pip download PyYAML PyHive "elasticsearch<9.0.0" thrift sasl pure-sasl six setuptools wheel urllib3 certifi elastic-transport thrift-sasl --dest .
+```
+
+## 下载完成后的文件列表
+下载完成后，offline_packages目录应该包含类似以下的文件：
+
+```
+offline_packages/
+├── README.md
+├── offline_installer.py
+├── download_packages.py
+├── requirements-offline.txt
+├── 手动下载包.txt
+├── PyYAML-6.0.2-cp312-cp312-linux_x86_64.whl
+├── PyHive-0.7.0-py3-none-any.whl
+├── elasticsearch-8.16.0-py3-none-any.whl
+├── thrift-0.21.0.tar.gz
+├── sasl-0.3.1.tar.gz
+├── pure_sasl-0.6.2-py3-none-any.whl
+├── six-1.16.0-py2.py3-none-any.whl
+├── setuptools-75.6.0-py3-none-any.whl
+├── wheel-0.45.1-py3-none-any.whl
+├── urllib3-2.2.3-py3-none-any.whl
+├── certifi-2024.8.30-py3-none-any.whl
+├── elastic_transport-8.15.1-py3-none-any.whl
+└── thrift_sasl-0.4.3.tar.gz
+```
+
+注意：
+1. 文件名可能因版本而异
+2. 某些包可能有平台特定版本（如linux_x86_64）
+3. 总大小约50-100MB
+
+## 验证下载
+下载完成后，可以检查文件：
+```bash
+ls -la *.whl *.tar.gz
+```
+
+应该看到多个.whl和.tar.gz文件。
+
+## 使用说明
+下载完成后，将整个项目目录复制到Linux服务器，然后运行：
+```bash
+./setup_and_run.sh
+```
+
+脚本会自动检测并使用这些离线包进行安装。

@@ -1,0 +1,29 @@
+# DWD和ADS一致性统计 - 离线安装包列表
+# 这些包已预先下载，可以离线安装
+
+# 基础依赖
+six>=1.16.0
+setuptools>=75.0.0
+wheel>=0.45.0
+
+# 配置文件解析
+PyYAML>=6.0.0
+
+# Hive连接相关
+thrift>=0.20.0
+pure-sasl>=0.6.0
+thrift-sasl>=0.4.0
+PyHive>=0.7.0
+
+# Elasticsearch连接相关
+urllib3>=1.26.0,<3.0.0
+certifi>=2024.0.0
+# elastic-transport 仅在ES 8.x需要，7.x不需要，保留可选
+# elastic-transport>=8.0.0
+elasticsearch>=7.0.0,<8.0.0
+
+# 注意：
+# 1. 这些包的具体版本可能因下载时间而异
+# 2. 某些包可能有平台特定的版本（如Linux x86_64）
+# 3. 如果离线安装失败，可以尝试在线安装：
+#    pip3 install -r requirements.txt --user

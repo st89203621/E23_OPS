@@ -2,7 +2,7 @@
 
 # Hive数据库连接配置
 hive:
-  host: "172.16.80.12"
+  host: "172.16.80.10"
   port: 10000
   username: null
   password: null
@@ -11,8 +11,8 @@ hive:
 
 # Elasticsearch连接配置
 elasticsearch:
-  host: "172.16.80.165"
-  port: 12000
+  host: "192.168.14.1"
+  port: 9200
   timeout: 30
 
 # 输出配置
@@ -22,8 +22,8 @@ output:
 
 # 日期配置
 date:
-  # 默认查询日期，如果为空则使用当前日期
-  default_query_date: ""
+  # 默认查询日期，如果为空则使用昨天日期
+  default_query_date: "yesterday"
   # 日期格式
   date_format: "%Y-%m-%d"
 
