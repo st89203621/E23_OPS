@@ -33,7 +33,7 @@ class ProtocolResult:
 class ConcurrentDataQualityMonitor:
     """并发数据质量监控器"""
     
-    def __init__(self, config_path: str = "config.yaml", max_workers: int = 8):
+    def __init__(self, config_path: str = "config.yaml", max_workers: int = 5):
         """
         初始化监控器
         
@@ -315,7 +315,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='DWD和ADS数据一致性并发统计')
-    parser.add_argument('--workers', type=int, default=8, help='并发线程数 (默认: 8)')
+    parser.add_argument('--workers', type=int, default=5, help='并发线程数 (默认: 5)')
     args = parser.parse_args()
     
     monitor = ConcurrentDataQualityMonitor(max_workers=args.workers)

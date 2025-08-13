@@ -1,12 +1,21 @@
 # 数据质量监控配置文件
 
-# Hive数据库连接配置
-hive:
+# DWD Hive数据库连接配置
+hive_dwd:
   host: "192.168.16.4"
   port: 10000
   username: null
   password: null
   database: "v64_deye_dw_dwd"
+  auth: null
+
+# ODS Hive数据库连接配置（与DWD在同一个库）
+hive_ods:
+  host: "192.168.16.4"
+  port: 10000
+  username: null
+  password: null
+  database: "v64_deye_dw_ods"
   auth: null
 
 # Elasticsearch连接配置
@@ -27,154 +36,213 @@ date:
   # 日期格式
   date_format: "%Y-%m-%d"
 
-# 协议映射配置（完整的29个协议）
+# 协议映射配置（完整的29个协议，ODS、DWD、ADS三层对比）
 protocols:
-  # 第一类：dwd_pr_开头的协议表（20个）
+  # 第一类：PR协议表（20个）
+  # 基于实际测试结果的完整映射关系
   email:
-    hive_table: "dwd_pr_email_store"
+    ods_table: "ods_pr_email_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_email_store"
     es_index_pattern: "deye_v64_email_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   engine:
-    hive_table: "dwd_pr_engine_store"
+    ods_table: "ods_pr_engine_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_engine_store"
     es_index_pattern: "deye_v64_engine_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   entertainment:
-    hive_table: "dwd_pr_entertainment_store"
+    ods_table: "ods_pr_game_store,ods_pr_live_store"  # 包含游戏和直播相关表
+    dwd_table: "dwd_pr_entertainment_store"
     es_index_pattern: "deye_v64_entertainment_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   finance:
-    hive_table: "dwd_pr_finance_store"
+    ods_table: "ods_pr_financial_store,ods_pr_payment_store"  # 包含金融和支付相关表
+    dwd_table: "dwd_pr_finance_store"
     es_index_pattern: "deye_v64_finance_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   ftp:
-    hive_table: "dwd_pr_ftp_store"
+    ods_table: "ods_pr_ftp_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_ftp_store"
     es_index_pattern: "deye_v64_ftp_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   http:
-    hive_table: "dwd_pr_http_store"
+    ods_table: "ods_pr_http_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_http_store"
     es_index_pattern: "deye_v64_http_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   im:
-    hive_table: "dwd_pr_im_store"
+    ods_table: "ods_pr_im_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_im_store"
     es_index_pattern: "deye_v64_im_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   lbs:
-    hive_table: "dwd_pr_lbs_store"
+    ods_table: "ods_pr_lbs_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_lbs_store"
     es_index_pattern: "deye_v64_lbs_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   multimedia:
-    hive_table: "dwd_pr_multimedia_store"
+    ods_table: "ods_pr_video_store,ods_pr_picture_store,ods_pr_voice_store"  # 包含视频、图片、语音相关表
+    dwd_table: "dwd_pr_multimedia_store"
     es_index_pattern: "deye_v64_multimedia_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   news:
-    hive_table: "dwd_pr_news_store"
+    ods_table: "ods_pr_news_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_news_store"
     es_index_pattern: "deye_v64_news_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   others:
-    hive_table: "dwd_pr_others_store"
+    ods_table: "ods_pr_other_store,ods_pr_weblogin_store"  # 包含其他和网页登录相关表
+    dwd_table: "dwd_pr_others_store"
     es_index_pattern: "deye_v64_other_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   remotectrl:
-    hive_table: "dwd_pr_remotectrl_store"
+    ods_table: "ods_pr_remotectrl_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_remotectrl_store"
     es_index_pattern: "deye_v64_remotectrl_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   shopping:
-    hive_table: "dwd_pr_shopping_store"
+    ods_table: "ods_pr_shop_store"  # 使用shop表代替不存在的shopping表
+    dwd_table: "dwd_pr_shopping_store"
     es_index_pattern: "deye_v64_shopping_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   sns:
-    hive_table: "dwd_pr_sns_store"
+    ods_table: "ods_pr_sns_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_sns_store"
     es_index_pattern: "deye_v64_sns_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   telnet:
-    hive_table: "dwd_pr_telnet_store"
+    ods_table: "ods_pr_telnet_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_telnet_store"
     es_index_pattern: "deye_v64_telnet_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   terminal:
-    hive_table: "dwd_pr_terminal_store"
+    ods_table: "ods_pr_terminal_store"  # 注意：此表在ODS中不存在，需要确认数据来源
+    dwd_table: "dwd_pr_terminal_store"
     es_index_pattern: "deye_v64_terminal_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   tool:
-    hive_table: "dwd_pr_tool_store"
+    ods_table: "ods_pr_p2p_store"  # 使用p2p表代替不存在的tool表
+    dwd_table: "dwd_pr_tool_store"
     es_index_pattern: "deye_v64_tool_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   travel:
-    hive_table: "dwd_pr_travel_store"
+    ods_table: "ods_pr_map_store,ods_pr_navigation_store"  # 包含地图和导航相关表
+    dwd_table: "dwd_pr_travel_store"
     es_index_pattern: "deye_v64_travel_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   voip:
-    hive_table: "dwd_pr_voip_store"
+    ods_table: "ods_pr_voip_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_voip_store"
     es_index_pattern: "deye_v64_voip_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   vpn:
-    hive_table: "dwd_pr_vpn_store"
+    ods_table: "ods_pr_vpn_store"  # ✅ 已验证存在
+    dwd_table: "dwd_pr_vpn_store"
     es_index_pattern: "deye_v64_vpn_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   # 第二类：基础通信协议（3个）
   call:
-    hive_table: "dwd_call_store"
+    ods_table: "ods_call_store"
+    dwd_table: "dwd_call_store"
     es_index_pattern: "deye_v64_call_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   fax:
-    hive_table: "dwd_fax_store"
+    ods_table: "ods_fax_store"  # 注意：此表在ODS中不存在，需要确认数据来源
+    dwd_table: "dwd_fax_store"
     es_index_pattern: "deye_v64_fax_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   sms:
-    hive_table: "dwd_sms_store"
+    ods_table: "ods_sms_store"  # 注意：此表在ODS中不存在，需要确认数据来源
+    dwd_table: "dwd_sms_store"
     es_index_pattern: "deye_v64_sms_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   # 第三类：固网Radius协议（1个）
   fixednetradius:
-    hive_table: "dwd_fixnet_radius_store"
+    ods_table: "ods_fixnet_radius_store"
+    dwd_table: "dwd_fixnet_radius_store"
     es_index_pattern: "deye_v64_fixednetradius_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   # 第四类：移动网位置协议（2个）
   location_mobilis:
-    hive_table: "dwd_mobilenet_location_mobilis_store"
+    ods_table: "ods_mobilenet_location_mobilis_store"  # 注意：此表在ODS中不存在，需要确认数据来源
+    dwd_table: "dwd_mobilenet_location_mobilis_store"
     es_index_pattern: "deye_v64_location_mobilis_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   location_ooredoo:
-    hive_table: "dwd_mobilenet_location_ooredoo_store"
+    ods_table: "ods_mobilenet_location_ooredoo_store"  # 注意：此表在ODS中不存在，需要确认数据来源
+    dwd_table: "dwd_mobilenet_location_ooredoo_store"
     es_index_pattern: "deye_v64_location_ooredoo_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   # 第五类：移动网Radius协议（3个）
   mobilenetradius_djezzy:
-    hive_table: "dwd_mobile_radius_djezzy_store"
+    ods_table: "ods_mobilenet_radius_djezzy_store"
+    dwd_table: "dwd_mobile_radius_djezzy_store"
     es_index_pattern: "deye_v64_mobilenetradius_djezzy_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   mobilenetradius_mobilis:
-    hive_table: "dwd_mobile_radius_mobilis_store"
+    ods_table: "ods_mobilenet_radius_mobilis_store"
+    dwd_table: "dwd_mobile_radius_mobilis_store"
     es_index_pattern: "deye_v64_mobilenetradius_mobilis_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
 
   mobilenetradius_ooredoo:
-    hive_table: "dwd_mobile_radius_ooredoo_store"
+    ods_table: "ods_mobilenet_radius_ooredoo_store"
+    dwd_table: "dwd_mobile_radius_ooredoo_store"
     es_index_pattern: "deye_v64_mobilenetradius_ooredoo_{year}{month:02d}-*"
     es_date_field: "capture_dayField"
+    date_field: "capture_day"
