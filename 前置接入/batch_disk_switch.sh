@@ -3,9 +3,9 @@
 # 批量数据盘切换脚本
 # 目标服务器列表（排除192.168.54.4和192.168.54.12）
 servers=(
-    "192.168.54.5" "192.168.54.6" "192.168.54.7" "192.168.54.8" "192.168.54.9" "192.168.54.10"
-    "192.168.54.11" "192.168.54.13" "192.168.54.14" "192.168.54.15" "192.168.54.16" 
-    "192.168.54.17" "192.168.54.18" "192.168.54.19" "192.168.54.20"
+    "192.168.94.1" "192.168.94.2" "192.168.94.3" "192.168.94.4" "192.168.94.5" "192.168.94.6"
+    "192.168.94.7" "192.168.94.8" "192.168.94.9" "192.168.94.10" "192.168.94.11"
+    "192.168.94.12"
 )
 
 # 对每台服务器执行数据盘切换
@@ -25,6 +25,7 @@ for server in "${servers[@]}"; do
         
         echo "=== 停止服务 ==="
         /data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT/bin/semptian-task.sh stop
+        /data1/daq/deye-pr-collect-master-1.4.3-SNAPSHOT/bin/semptian-task.sh stop
         
         echo "=== 迁移MQ数据 ==="
         cp -r /data1/apache-activemq-5.7.0 /data2/
@@ -40,6 +41,7 @@ for server in "${servers[@]}"; do
         /data1/daq/deye-pr-collect-task-1.4.3-SNAPSHOT/bin/semptian-task.sh start
         /data1/daq/deye-dataprotocol-file-compress-v6.2.3.6/bin/start.sh
         /data1/daq/deye-dataprotocol-file-ferry-v6.2.3.4/bin/start.sh
+        /data1/daq/deye-pr-collect-master-1.4.3-SNAPSHOT/bin/semptian-task.sh start
         
         echo "=== $HOSTNAME 切换完成 ==="
 EOF
