@@ -43,3 +43,111 @@ WHERE capture_day = '2025-08-04'
  实时话单数147070 语音数30391
 
  结论：容灾线路话单少但语音文件多，和配置及程序版本无关
+
+
+
+
+    -- 差异数据中的运营商分布分析
+-- 基于a_number、b_number、capture_day、capture_hour确认差异数据
+WITH dr_data AS (
+    SELECT
+        a_number,
+        b_number,
+        capture_day,
+        capture_hour,
+        COUNT(*) as dr_count
+    FROM v64_deye_dw_ods.ods_voip_dr_test_store
+    WHERE capture_day = '2025-08-04'
+      AND capture_hour = '11'
+      AND capture_time >= unix_timestamp('2025-08-04 11:10:00') * 1000
+      AND capture_time <= unix_timestamp('2025-08-04 11:50:00') * 1000
+    GROUP BY a_number, b_number, capture_day, capture_hour
+),
+real_data AS (
+    SELECT
+        a_number,
+        b_number,
+        capture_day,
+        capture_hour,
+        COUNT(*) as real_count
+    FROM v64_deye_dw_ods.ods_voip_store
+    WHERE capture_day = '2025-08-04'
+      AND capture_hour = '11'
+      AND capture_time >= unix_timestamp('2025-08-04 11:10:00') * 1000
+      AND capture_time <= unix_timestamp('2025-08-04 11:50:00') * 1000
+    GROUP BY a_number, b_number, capture_day, capture_hour
+),
+-- 找出容灾独有的数据
+dr_only AS (
+    SELECT
+        d.a_number,
+        d.b_number,
+        d.capture_day,
+        d.capture_hour,
+        d.dr_count,
+        '容灾独有数据' as diff_type
+    FROM dr_data d
+    LEFT JOIN real_data r ON d.a_number = r.a_number
+                          AND d.b_number = r.b_number
+                          AND d.capture_day = r.capture_day
+                          AND d.capture_hour = r.capture_hour
+    WHERE r.a_number IS NULL
+),
+-- 找出实时独有的数据
+real_only AS (
+    SELECT
+        r.a_number,
+        r.b_number,
+        r.capture_day,
+        r.capture_hour,
+        r.real_count as dr_count,
+        '实时独有数据' as diff_type
+    FROM real_data r
+    LEFT JOIN dr_data d ON r.a_number = d.a_number
+                        AND r.b_number = d.b_number
+                        AND r.capture_day = d.capture_day
+                        AND r.capture_hour = d.capture_hour
+    WHERE d.a_number IS NULL
+),
+-- 合并差异数据
+diff_data AS (
+    SELECT * FROM dr_only
+    UNION ALL
+    SELECT * FROM real_only
+)
+-- 统计差异数据中的运营商分布
+SELECT
+    diff_type as data_source,
+    CASE
+        WHEN a_number LIKE '+2135%' OR b_number LIKE '+2135%' THEN 'Ooredoo_Mobile'
+        WHEN a_number LIKE '+2136%' OR b_number LIKE '+2136%' THEN 'Mobilis_Mobile'
+        WHEN a_number LIKE '+2137%' OR b_number LIKE '+2137%' THEN 'Djezzy_Mobile'
+        WHEN a_number LIKE '+21321%' OR b_number LIKE '+21321%' THEN 'Algerie_Telecom_Fixed'
+        WHEN a_number LIKE '+213%' OR b_number LIKE '+213%' THEN 'Algeria_Other'
+        -- 兼容不带+号的格式
+        WHEN a_number LIKE '2135%' OR b_number LIKE '2135%' THEN 'Ooredoo_Mobile_No_Plus'
+        WHEN a_number LIKE '2136%' OR b_number LIKE '2136%' THEN 'Mobilis_Mobile_No_Plus'
+        WHEN a_number LIKE '2137%' OR b_number LIKE '2137%' THEN 'Djezzy_Mobile_No_Plus'
+        WHEN a_number LIKE '21321%' OR b_number LIKE '21321%' THEN 'Algerie_Telecom_Fixed_No_Plus'
+        WHEN a_number LIKE '213%' OR b_number LIKE '213%' THEN 'Algeria_Other_No_Plus'
+        ELSE 'Non_Algeria'
+    END as operator_type,
+    COUNT(*) as record_count,
+    SUM(dr_count) as total_calls,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(PARTITION BY diff_type), 2) as percentage
+FROM diff_data
+GROUP BY diff_type, CASE
+        WHEN a_number LIKE '+2135%' OR b_number LIKE '+2135%' THEN 'Ooredoo_Mobile'
+        WHEN a_number LIKE '+2136%' OR b_number LIKE '+2136%' THEN 'Mobilis_Mobile'
+        WHEN a_number LIKE '+2137%' OR b_number LIKE '+2137%' THEN 'Djezzy_Mobile'
+        WHEN a_number LIKE '+21321%' OR b_number LIKE '+21321%' THEN 'Algerie_Telecom_Fixed'
+        WHEN a_number LIKE '+213%' OR b_number LIKE '+213%' THEN 'Algeria_Other'
+        -- 兼容不带+号的格式
+        WHEN a_number LIKE '2135%' OR b_number LIKE '2135%' THEN 'Ooredoo_Mobile_No_Plus'
+        WHEN a_number LIKE '2136%' OR b_number LIKE '2136%' THEN 'Mobilis_Mobile_No_Plus'
+        WHEN a_number LIKE '2137%' OR b_number LIKE '2137%' THEN 'Djezzy_Mobile_No_Plus'
+        WHEN a_number LIKE '21321%' OR b_number LIKE '21321%' THEN 'Algerie_Telecom_Fixed_No_Plus'
+        WHEN a_number LIKE '213%' OR b_number LIKE '213%' THEN 'Algeria_Other_No_Plus'
+        ELSE 'Non_Algeria'
+    END
+ORDER BY diff_type, record_count DESC;
