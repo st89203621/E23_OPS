@@ -46,6 +46,7 @@ except ImportError:
     DB_AVAILABLE = False
 
 import config
+from doris_connector import DorisConnector
 
 
 class UserFlowStatsProcessor:
@@ -200,7 +201,7 @@ class UserFlowStatsProcessor:
 
     def save_user_data_to_database(self, data: List[Dict[str, Any]]) -> bool:
         """
-        将用户级别数据保存到MySQL数据库
+        将用户级别数据保存到Doris数据库
 
         Args:
             data: 要保存的用户数据列表
@@ -213,80 +214,82 @@ class UserFlowStatsProcessor:
             return False
 
         try:
-            self.logger.info("开始连接数据库...")
+            self.logger.info("开始连接Doris数据库...")
 
-            # 连接数据库
-            connection = pymysql.connect(
-                host=config.DB_HOST,
-                user=config.DB_USER,
-                password=config.DB_PASSWORD,
-                database=config.DB_NAME,
-                charset='utf8mb4',
-                autocommit=True
-            )
+            # 使用Doris连接器
+            with DorisConnector(self.logger) as connector:
+                if not connector.test_connection():
+                    self.logger.error("Doris数据库连接失败")
+                    return False
 
-            cursor = connection.cursor()
+                # 创建用户级别表（如果不存在）- Doris版本
+                create_table_sql = f"""
+                CREATE TABLE IF NOT EXISTS `{config.DB_USER_TABLE}` (
+                    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+                    `machine_room` VARCHAR(100) NOT NULL COMMENT '机房',
+                    `device_ip` VARCHAR(45) NOT NULL COMMENT '设备IP',
+                    `device_type` VARCHAR(10) NOT NULL COMMENT '设备类型',
+                    `record_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+                    `user_name` VARCHAR(100) NOT NULL COMMENT '用户名',
+                    `user_ip` VARCHAR(45) NOT NULL COMMENT 'IP',
+                    `up_flow_rate` DECIMAL(12,3) NOT NULL DEFAULT "0" COMMENT '上行Mbps',
+                    `down_flow_rate` DECIMAL(12,3) NOT NULL DEFAULT "0" COMMENT '下行Mbps',
+                    `total_flow_rate` DECIMAL(12,3) NOT NULL DEFAULT "0" COMMENT '总流速Mbps',
+                    `session_count` INT NOT NULL DEFAULT "0" COMMENT '会话数',
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+                ) ENGINE=OLAP
+                DUPLICATE KEY(`id`, `machine_room`, `device_ip`, `device_type`, `record_time`)
+                COMMENT 'NF设备Top用户流速统计表V2（用户级别，新表）'
+                DISTRIBUTED BY HASH(`device_ip`) BUCKETS 32
+                PROPERTIES (
+                    "replication_allocation" = "tag.location.default: 1",
+                    "storage_format" = "V2",
+                    "light_schema_change" = "true",
+                    "disable_auto_compaction" = "false",
+                    "enable_single_replica_compaction" = "false"
+                )
+                """
 
-            # 创建用户级别表（如果不存在）
-            create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS {config.DB_USER_TABLE} (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                machine_room VARCHAR(100) NOT NULL COMMENT '机房',
-                device_ip VARCHAR(45) NOT NULL COMMENT '设备IP',
-                device_type VARCHAR(10) NOT NULL COMMENT '设备类型',
-                user_name VARCHAR(100) NOT NULL COMMENT '用户名',
-                user_ip VARCHAR(45) NOT NULL COMMENT 'IP',
-                up_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '上行Mbps',
-                down_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '下行Mbps',
-                total_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '总流速Mbps',
-                session_count INT NOT NULL DEFAULT 0 COMMENT '会话数',
-                record_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
-                INDEX idx_device_ip (device_ip),
-                INDEX idx_user_ip (user_ip),
-                INDEX idx_machine_room (machine_room),
-                INDEX idx_record_time (record_time),
-                INDEX idx_total_flow_rate (total_flow_rate)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='NF设备Top用户流速统计（用户级别）'
-            """
+                if not connector.create_table_if_not_exists(config.DB_USER_TABLE, create_table_sql):
+                    return False
 
-            cursor.execute(create_table_sql)
-            self.logger.info(f"数据库表 {config.DB_USER_TABLE} 准备完成")
+                # 准备批量插入数据
+                columns = [
+                    'machine_room', 'device_ip', 'device_type', 'user_name', 'user_ip',
+                    'up_flow_rate', 'down_flow_rate', 'total_flow_rate', 'session_count', 'record_time'
+                ]
 
-            # 插入数据（使用批次时间）
-            insert_sql = f"""
-            INSERT INTO {config.DB_USER_TABLE}
-            (machine_room, device_ip, device_type, user_name, user_ip,
-             up_flow_rate, down_flow_rate, total_flow_rate, session_count, record_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
+                batch_data = []
+                for record in data:
+                    try:
+                        values = (
+                            record.get('machine_room', 'Unknown'),  # 机房
+                            record.get('source_ip', ''),           # 设备IP
+                            record.get('device_type', 'Unknown'),  # 设备类型
+                            record.get('name', 'Unknown'),         # 用户名
+                            record.get('ip', ''),                  # IP
+                            record.get('up_mbps', 0),              # 上行Mbps
+                            record.get('down_mbps', 0),            # 下行Mbps
+                            record.get('total_mbps', 0),           # 总流速Mbps
+                            record.get('session', 0),              # 会话数
+                            self.batch_time                        # 批次时间
+                        )
+                        batch_data.append(values)
 
-            insert_count = 0
-            for record in data:
-                try:
-                    values = (
-                        record.get('machine_room', 'Unknown'),  # 机房
-                        record.get('source_ip', ''),           # 设备IP
-                        record.get('device_type', 'Unknown'),  # 设备类型
-                        record.get('name', 'Unknown'),         # 用户名
-                        record.get('ip', ''),                  # IP
-                        record.get('up_mbps', 0),              # 上行Mbps
-                        record.get('down_mbps', 0),            # 下行Mbps
-                        record.get('total_mbps', 0),           # 总流速Mbps
-                        record.get('session', 0),              # 会话数
-                        self.batch_time                        # 批次时间
-                    )
+                    except Exception as e:
+                        self.logger.warning(f"准备记录失败: {str(e)}")
+                        continue
 
-                    cursor.execute(insert_sql, values)
-                    insert_count += 1
+                # 批量插入数据
+                success, insert_count = connector.batch_insert(config.DB_USER_TABLE, columns, batch_data)
 
-                except Exception as e:
-                    self.logger.warning(f"插入记录失败: {str(e)}")
-                    continue
-
-            connection.close()
-
-            self.logger.info(f"成功保存 {insert_count} 条记录到数据库")
-            return True
+                if success:
+                    self.logger.info(f"成功保存 {insert_count} 条记录到Doris数据库")
+                    return True
+                else:
+                    self.logger.error("批量插入数据失败")
+                    return False
 
         except Exception as e:
             self.logger.error(f"用户数据库保存失败: {str(e)}")
@@ -294,7 +297,7 @@ class UserFlowStatsProcessor:
 
     def save_device_data_to_database(self, data: List[Dict[str, Any]]) -> bool:
         """
-        将设备级别数据保存到MySQL数据库
+        将设备级别数据保存到Doris数据库
 
         Args:
             data: 要保存的设备数据列表
@@ -307,72 +310,76 @@ class UserFlowStatsProcessor:
             return False
 
         try:
-            self.logger.info("开始连接数据库保存设备数据...")
+            self.logger.info("开始连接Doris数据库保存设备数据...")
 
-            # 连接数据库
-            connection = pymysql.connect(
-                host=config.DB_HOST,
-                user=config.DB_USER,
-                password=config.DB_PASSWORD,
-                database=config.DB_NAME,
-                charset='utf8mb4',
-                autocommit=True
-            )
+            # 使用Doris连接器
+            with DorisConnector(self.logger) as connector:
+                if not connector.test_connection():
+                    self.logger.error("Doris数据库连接失败")
+                    return False
 
-            cursor = connection.cursor()
+                # 创建设备级别表（如果不存在）- Doris版本
+                create_table_sql = f"""
+                CREATE TABLE IF NOT EXISTS `{config.DB_DEVICE_TABLE}` (
+                    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+                    `machine_room` VARCHAR(100) NOT NULL COMMENT '机房',
+                    `device_ip` VARCHAR(45) NOT NULL COMMENT '设备IP',
+                    `device_type` VARCHAR(10) NOT NULL COMMENT '设备类型',
+                    `record_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+                    `up_flow_rate` DECIMAL(12,3) NOT NULL DEFAULT "0" COMMENT '上行Mbps',
+                    `down_flow_rate` DECIMAL(12,3) NOT NULL DEFAULT "0" COMMENT '下行Mbps',
+                    `total_flow_rate` DECIMAL(12,3) NOT NULL DEFAULT "0" COMMENT '总流速Mbps',
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+                ) ENGINE=OLAP
+                DUPLICATE KEY(`id`, `machine_room`, `device_ip`, `device_type`, `record_time`)
+                COMMENT 'NF设备流速统计表（设备级别）'
+                DISTRIBUTED BY HASH(`device_ip`) BUCKETS 16
+                PROPERTIES (
+                    "replication_allocation" = "tag.location.default: 1",
+                    "storage_format" = "V2",
+                    "light_schema_change" = "true",
+                    "disable_auto_compaction" = "false",
+                    "enable_single_replica_compaction" = "false"
+                )
+                """
 
-            # 创建设备级别表（如果不存在）
-            create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS {config.DB_DEVICE_TABLE} (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                machine_room VARCHAR(100) NOT NULL COMMENT '机房',
-                device_ip VARCHAR(45) NOT NULL COMMENT '设备IP',
-                device_type VARCHAR(10) NOT NULL COMMENT '设备类型',
-                up_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '上行Mbps',
-                down_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '下行Mbps',
-                total_flow_rate DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT '总流速Mbps',
-                record_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
-                INDEX idx_device_ip (device_ip),
-                INDEX idx_machine_room (machine_room),
-                INDEX idx_record_time (record_time),
-                INDEX idx_total_flow_rate (total_flow_rate)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='NF设备流速统计（设备级别）'
-            """
+                if not connector.create_table_if_not_exists(config.DB_DEVICE_TABLE, create_table_sql):
+                    return False
 
-            cursor.execute(create_table_sql)
-            self.logger.info(f"数据库表 {config.DB_DEVICE_TABLE} 准备完成")
+                # 准备批量插入数据
+                columns = [
+                    'machine_room', 'device_ip', 'device_type',
+                    'up_flow_rate', 'down_flow_rate', 'total_flow_rate', 'record_time'
+                ]
 
-            # 插入数据（使用批次时间）
-            insert_sql = f"""
-            INSERT INTO {config.DB_DEVICE_TABLE}
-            (machine_room, device_ip, device_type, up_flow_rate, down_flow_rate, total_flow_rate, record_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
+                batch_data = []
+                for record in data:
+                    try:
+                        values = (
+                            record.get('machine_room', 'Unknown'),  # 机房
+                            record.get('device_ip', ''),           # 设备IP
+                            record.get('device_type', 'Unknown'),  # 设备类型
+                            record.get('up_mbps', 0),              # 上行Mbps
+                            record.get('down_mbps', 0),            # 下行Mbps
+                            record.get('total_mbps', 0),           # 总流速Mbps
+                            self.batch_time                        # 批次时间
+                        )
+                        batch_data.append(values)
 
-            insert_count = 0
-            for record in data:
-                try:
-                    values = (
-                        record.get('machine_room', 'Unknown'),  # 机房
-                        record.get('device_ip', ''),           # 设备IP
-                        record.get('device_type', 'Unknown'),  # 设备类型
-                        record.get('up_mbps', 0),              # 上行Mbps
-                        record.get('down_mbps', 0),            # 下行Mbps
-                        record.get('total_mbps', 0),           # 总流速Mbps
-                        self.batch_time                        # 批次时间
-                    )
+                    except Exception as e:
+                        self.logger.warning(f"准备设备记录失败: {str(e)}")
+                        continue
 
-                    cursor.execute(insert_sql, values)
-                    insert_count += 1
+                # 批量插入数据
+                success, insert_count = connector.batch_insert(config.DB_DEVICE_TABLE, columns, batch_data)
 
-                except Exception as e:
-                    self.logger.warning(f"插入设备记录失败: {str(e)}")
-                    continue
-
-            connection.close()
-
-            self.logger.info(f"成功保存 {insert_count} 条设备记录到数据库")
-            return True
+                if success:
+                    self.logger.info(f"成功保存 {insert_count} 条设备记录到Doris数据库")
+                    return True
+                else:
+                    self.logger.error("批量插入设备数据失败")
+                    return False
 
         except Exception as e:
             self.logger.error(f"设备数据库保存失败: {str(e)}")

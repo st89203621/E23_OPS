@@ -76,13 +76,17 @@ OUTPUT_TO_DATABASE = True  # 是否输出到数据库
 # Excel配置
 EXCEL_SHEET_NAME = "用户流速统计"
 
-# 数据库配置
-DB_HOST = "192.168.13.4"
+# 数据库配置 - Doris
+DB_HOST = "192.168.15.51"
+DB_PORT = 9030
 DB_USER = "root"
 DB_PASSWORD = "123456"
 DB_NAME = "packets_statistics"
 DB_USER_TABLE = "nf_user_flow_statistics_v2"  # 用户级别数据表（新表）
 DB_DEVICE_TABLE = "nf_device_flow_statistics"  # 设备级别数据表
+
+# 数据库类型配置
+DB_TYPE = "doris"  # 可选值: "mysql", "doris"
 
 # 机房名称到代号的映射
 MACHINE_ROOM_MAPPING = {
