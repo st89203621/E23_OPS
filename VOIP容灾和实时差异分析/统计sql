@@ -1,0 +1,45 @@
+SELECT
+    'DR-VOIP' AS data_source,
+    COUNT(*) AS total_records,
+    COUNT(DISTINCT call_id) AS unique_calls,
+    MIN(from_unixtime(CAST(capture_time/1000 AS BIGINT))) AS earliest_time,
+    MAX(from_unixtime(CAST(capture_time/1000 AS BIGINT))) AS latest_time,
+    ROUND(AVG(duration), 2) AS avg_duration_seconds
+FROM v64_deye_dw_ods.ods_voip_dr_test_store
+WHERE capture_day = '2025-08-04'
+  AND capture_hour = '11'
+  AND capture_time >= unix_timestamp('2025-08-04 11:10:00') * 1000
+  AND capture_time <= unix_timestamp('2025-08-04 11:50:00') * 1000
+UNION ALL
+SELECT
+    'VOIP2' AS data_source,
+    COUNT(*) AS total_records,
+    COUNT(DISTINCT call_id) AS unique_calls,
+    MIN(from_unixtime(CAST(capture_time/1000 AS BIGINT))) AS earliest_time,
+    MAX(from_unixtime(CAST(capture_time/1000 AS BIGINT))) AS latest_time,
+    ROUND(AVG(duration), 2) AS avg_duration_seconds
+FROM v64_deye_dw_ods.ods_voip_store
+WHERE capture_day = '2025-08-04'
+  AND capture_hour = '11'
+  AND capture_time >= unix_timestamp('2025-08-04 11:10:00') * 1000
+  AND capture_time <= unix_timestamp('2025-08-04 11:50:00') * 1000;
+
+
+ VOIP容灾CBP系统统计
+ 第一次统计（没有任何调整统计）
+ 8月10日统计 时间段2025-08-04 11:10:00 至 2025-08-04 11:50:00
+ 容灾话单数31571 语音数20339
+ 实时话单数55395 语音数15457
+
+ 第二次统计（调整T24的配置，以及时间同步后统计）
+ 8月14日统计 时间段2025-08-13 16:10:00 至 2025-08-13 16:50:00
+ 容灾话单数47527 语音数14720
+ 实时话单数47481 语音数9712
+
+
+ 第三次统计（调整了各程序版本）
+ 8月14日统计 时间段2025-08-13 16:00:00 至 2025-08-13 18:00:00
+ 容灾话单数117861 语音数45685
+ 实时话单数147070 语音数30391
+
+ 结论：容灾线路话单少但语音文件多，和配置及程序版本无关
