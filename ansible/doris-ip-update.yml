@@ -1,0 +1,199 @@
+---
+# Ansible Playbook for updating Doris cluster IP configuration
+# 用于修改Doris集群IP配置的Ansible脚本
+# 
+# 使用方法:
+# ansible-playbook -i inventory/doris_hosts doris-ip-update.yml --extra-vars "old_ip=192.168.15.51 new_ip=192.168.16.51"
+
+- name: Update Doris Cluster IP Configuration
+  hosts: doris_fe
+  become: yes
+  gather_facts: yes
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+    doris_user: "semptian"
+    doris_group: "semptian"
+    backup_suffix: "{{ ansible_date_time.epoch }}"
+    
+  pre_tasks:
+    - name: Validate required variables
+      fail:
+        msg: "Please provide old_ip and new_ip variables"
+      when: old_ip is not defined or new_ip is not defined
+      
+    - name: Display IP change information
+      debug:
+        msg: "Changing Doris IP from {{ old_ip }} to {{ new_ip }}"
+
+  tasks:
+    - name: Stop Doris FE service
+      shell: |
+        cd {{ doris_home }}/fe/bin
+        ./stop_fe.sh
+      become_user: "{{ doris_user }}"
+      ignore_errors: yes
+      
+    - name: Wait for FE service to stop
+      wait_for:
+        port: 9030
+        host: "{{ ansible_default_ipv4.address }}"
+        state: stopped
+        timeout: 60
+      ignore_errors: yes
+
+    - name: Backup FE configuration files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ item }}.backup.{{ backup_suffix }}"
+        remote_src: yes
+        owner: "{{ doris_user }}"
+        group: "{{ doris_group }}"
+      loop:
+        - "{{ doris_home }}/fe/conf/fe.conf"
+        - "{{ doris_home }}/fe/doris-meta/image/ROLE"
+        - "{{ doris_home }}/fe/doris-meta/image/VERSION"
+      ignore_errors: yes
+
+    - name: Update FE configuration - priority_networks
+      lineinfile:
+        path: "{{ doris_home }}/fe/conf/fe.conf"
+        regexp: '^priority_networks\s*='
+        line: "priority_networks = {{ new_ip }}/24"
+        backup: yes
+        
+    - name: Update FE configuration - frontend_address
+      lineinfile:
+        path: "{{ doris_home }}/fe/conf/fe.conf"
+        regexp: '^frontend_address\s*='
+        line: "frontend_address = {{ new_ip }}"
+        backup: yes
+
+    - name: Update FE configuration - edit_log_port
+      lineinfile:
+        path: "{{ doris_home }}/fe/conf/fe.conf"
+        regexp: '^edit_log_port\s*='
+        line: "edit_log_port = 9010"
+        backup: yes
+
+    - name: Update hosts file for Doris cluster
+      lineinfile:
+        path: /etc/hosts
+        regexp: '.*{{ item.hostname }}.*'
+        line: "{{ item.ip }} {{ item.hostname }}"
+        backup: yes
+      loop:
+        - { ip: "192.168.15.51", hostname: "doris-fe-01" }
+        - { ip: "192.168.15.53", hostname: "doris-fe-02" }
+        - { ip: "192.168.15.61", hostname: "doris-fe-03" }
+        - { ip: "192.168.15.62", hostname: "doris-fe-04" }
+        - { ip: "192.168.15.70", hostname: "doris-fe-05" }
+
+    - name: Start Doris FE service
+      shell: |
+        cd {{ doris_home }}/fe/bin
+        ./start_fe.sh --daemon
+      become_user: "{{ doris_user }}"
+      
+    - name: Wait for FE service to start
+      wait_for:
+        port: 9030
+        host: "{{ new_ip }}"
+        state: started
+        timeout: 120
+
+    - name: Verify FE service status
+      uri:
+        url: "http://{{ new_ip }}:8030/api/show_proc?path=frontends"
+        method: GET
+        timeout: 10
+      register: fe_status
+      ignore_errors: yes
+
+    - name: Display FE status
+      debug:
+        var: fe_status
+      when: fe_status is defined
+
+---
+- name: Update Doris BE Configuration
+  hosts: doris_be
+  become: yes
+  gather_facts: yes
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+    doris_user: "semptian"
+    doris_group: "semptian"
+    backup_suffix: "{{ ansible_date_time.epoch }}"
+
+  tasks:
+    - name: Stop Doris BE service
+      shell: |
+        cd {{ doris_home }}/be/bin
+        ./stop_be.sh
+      become_user: "{{ doris_user }}"
+      ignore_errors: yes
+      
+    - name: Wait for BE service to stop
+      wait_for:
+        port: 9060
+        host: "{{ ansible_default_ipv4.address }}"
+        state: stopped
+        timeout: 60
+      ignore_errors: yes
+
+    - name: Backup BE configuration files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ item }}.backup.{{ backup_suffix }}"
+        remote_src: yes
+        owner: "{{ doris_user }}"
+        group: "{{ doris_group }}"
+      loop:
+        - "{{ doris_home }}/be/conf/be.conf"
+      ignore_errors: yes
+
+    - name: Update BE configuration - priority_networks
+      lineinfile:
+        path: "{{ doris_home }}/be/conf/be.conf"
+        regexp: '^priority_networks\s*='
+        line: "priority_networks = {{ new_ip }}/24"
+        backup: yes
+
+    - name: Update hosts file for Doris cluster
+      lineinfile:
+        path: /etc/hosts
+        regexp: '.*{{ item.hostname }}.*'
+        line: "{{ item.ip }} {{ item.hostname }}"
+        backup: yes
+      loop:
+        - { ip: "192.168.15.51", hostname: "doris-fe-01" }
+        - { ip: "192.168.15.53", hostname: "doris-fe-02" }
+        - { ip: "192.168.15.61", hostname: "doris-fe-03" }
+        - { ip: "192.168.15.62", hostname: "doris-fe-04" }
+        - { ip: "192.168.15.70", hostname: "doris-fe-05" }
+
+    - name: Start Doris BE service
+      shell: |
+        cd {{ doris_home }}/be/bin
+        ./start_be.sh --daemon
+      become_user: "{{ doris_user }}"
+      
+    - name: Wait for BE service to start
+      wait_for:
+        port: 9060
+        host: "{{ new_ip }}"
+        state: started
+        timeout: 120
+
+    - name: Verify BE service status
+      uri:
+        url: "http://{{ new_ip }}:8040/api/health"
+        method: GET
+        timeout: 10
+      register: be_status
+      ignore_errors: yes
+
+    - name: Display BE status
+      debug:
+        var: be_status
+      when: be_status is defined

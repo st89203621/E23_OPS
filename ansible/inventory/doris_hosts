@@ -1,0 +1,62 @@
+# Doris集群主机清单
+# 基于E23环境信息整理的Doris集群配置
+# FE节点: 192.168.15.51,192.168.15.53,192.168.15.61,192.168.15.62,192.168.15.70
+# BE节点: 192.168.15.51-76 (26台设备)
+
+[doris_fe]
+# Doris Frontend 节点
+doris-fe-01 ansible_host=192.168.15.51 ansible_user=semptian ansible_ssh_pass=123456
+doris-fe-02 ansible_host=192.168.15.53 ansible_user=semptian ansible_ssh_pass=123456
+doris-fe-03 ansible_host=192.168.15.61 ansible_user=semptian ansible_ssh_pass=123456
+doris-fe-04 ansible_host=192.168.15.62 ansible_user=semptian ansible_ssh_pass=123456
+doris-fe-05 ansible_host=192.168.15.70 ansible_user=semptian ansible_ssh_pass=123456
+
+[doris_be]
+# Doris Backend 节点 (192.168.15.51-76)
+doris-be-01 ansible_host=192.168.15.51 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-02 ansible_host=192.168.15.52 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-03 ansible_host=192.168.15.53 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-04 ansible_host=192.168.15.54 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-05 ansible_host=192.168.15.55 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-06 ansible_host=192.168.15.56 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-07 ansible_host=192.168.15.57 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-08 ansible_host=192.168.15.58 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-09 ansible_host=192.168.15.59 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-10 ansible_host=192.168.15.60 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-11 ansible_host=192.168.15.61 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-12 ansible_host=192.168.15.62 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-13 ansible_host=192.168.15.63 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-14 ansible_host=192.168.15.64 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-15 ansible_host=192.168.15.65 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-16 ansible_host=192.168.15.66 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-17 ansible_host=192.168.15.67 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-18 ansible_host=192.168.15.68 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-19 ansible_host=192.168.15.69 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-20 ansible_host=192.168.15.70 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-21 ansible_host=192.168.15.71 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-22 ansible_host=192.168.15.72 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-23 ansible_host=192.168.15.73 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-24 ansible_host=192.168.15.74 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-25 ansible_host=192.168.15.75 ansible_user=semptian ansible_ssh_pass=123456
+doris-be-26 ansible_host=192.168.15.76 ansible_user=semptian ansible_ssh_pass=123456
+
+[doris_cluster:children]
+doris_fe
+doris_be
+
+[doris_cluster:vars]
+# 通用变量
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+ansible_python_interpreter=/usr/bin/python3
+doris_home=/home/semptian/apache-doris-2.1.6-bin-x64
+doris_user=semptian
+doris_group=semptian
+
+# 连接配置
+doris_fe_port=9030
+doris_fe_http_port=8030
+doris_be_port=9060
+doris_be_http_port=8040
+
+# 数据库连接信息
+doris_root_password=123456
