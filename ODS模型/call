@@ -1,0 +1,66 @@
+-- v64_deye_dw_ods.ods_call_store definition
+
+CREATE EXTERNAL TABLE `v64_deye_dw_ods.ods_call_store`(
+  `call_id` string,
+  `a_number` string,
+  `a_sip_uri` string,
+  `a_area_code` string,
+  `a_imsi` string,
+  `a_imei` string,
+  `a_neid` string,
+  `a_mcc` string,
+  `a_mnc` string,
+  `a_begin_region` string,
+  `a_begin_cell` string,
+  `a_end_region` string,
+  `a_end_cell` string,
+  `a_point_code` string,
+  `b_number` string,
+  `b_format_number` string,
+  `b_area_code` string,
+  `b_sip_uri` string,
+  `b_orginal_forword_number` string,
+  `b_imsi` string,
+  `b_neid` string,
+  `b_point_code` string,
+  `action` string,
+  `start_time` bigint,
+  `end_time` bigint,
+  `duration` int,
+  `file_path` string,
+  `extend_column` string,
+  `call_type` int,
+  `sip_code` string,
+  `isp_id` int,
+  `sms_lang` string,
+  `sms_text` string,
+  `third_numbergroup` string,
+  `capture_time` bigint,
+  `insert_time` bigint,
+  `data_id` string,
+  `data_type` int)
+PARTITIONED BY (
+  `capture_day` string,
+  `capture_hour` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  'hdfs://cbpcluster/warehouse/tablespace/external/hive/v64_deye_dw_ods.db/ods_call_store'
+TBLPROPERTIES (
+  'bucketing_version'='2',
+  'discover.partitions'='false',
+  'parquet.compression'='GZIP',
+  'partition.time-extractor.timestamp-pattern'='$capture_day $capture_hour:00:00',
+  'sink.partition-commit.delay'='5 min',
+  'sink.partition-commit.policy.kind'='metastore,success-file',
+  'spark.sql.create.version'='2.2 or prior',
+  'spark.sql.sources.schema.numPartCols'='2',
+  'spark.sql.sources.schema.numParts'='1',
+  'spark.sql.sources.schema.part.0'='{"type":"struct","fields":[{"name":"call_id","type":"string","nullable":true,"metadata":{}},{"name":"a_number","type":"string","nullable":true,"metadata":{}},{"name":"a_sip_uri","type":"string","nullable":true,"metadata":{}},{"name":"a_area_code","type":"string","nullable":true,"metadata":{}},{"name":"a_imsi","type":"string","nullable":true,"metadata":{}},{"name":"a_imei","type":"string","nullable":true,"metadata":{}},{"name":"a_neid","type":"string","nullable":true,"metadata":{}},{"name":"a_mcc","type":"string","nullable":true,"metadata":{}},{"name":"a_mnc","type":"string","nullable":true,"metadata":{}},{"name":"a_begin_region","type":"string","nullable":true,"metadata":{}},{"name":"a_begin_cell","type":"string","nullable":true,"metadata":{}},{"name":"a_end_region","type":"string","nullable":true,"metadata":{}},{"name":"a_end_cell","type":"string","nullable":true,"metadata":{}},{"name":"a_point_code","type":"string","nullable":true,"metadata":{}},{"name":"b_number","type":"string","nullable":true,"metadata":{}},{"name":"b_format_number","type":"string","nullable":true,"metadata":{}},{"name":"b_area_code","type":"string","nullable":true,"metadata":{}},{"name":"b_sip_uri","type":"string","nullable":true,"metadata":{}},{"name":"b_orginal_forword_number","type":"string","nullable":true,"metadata":{}},{"name":"b_imsi","type":"string","nullable":true,"metadata":{}},{"name":"b_neid","type":"string","nullable":true,"metadata":{}},{"name":"b_point_code","type":"string","nullable":true,"metadata":{}},{"name":"action","type":"string","nullable":true,"metadata":{}},{"name":"start_time","type":"long","nullable":true,"metadata":{}},{"name":"end_time","type":"long","nullable":true,"metadata":{}},{"name":"duration","type":"integer","nullable":true,"metadata":{}},{"name":"file_path","type":"string","nullable":true,"metadata":{}},{"name":"extend_column","type":"string","nullable":true,"metadata":{}},{"name":"call_type","type":"integer","nullable":true,"metadata":{}},{"name":"sip_code","type":"string","nullable":true,"metadata":{}},{"name":"isp_id","type":"integer","nullable":true,"metadata":{}},{"name":"sms_lang","type":"string","nullable":true,"metadata":{}},{"name":"sms_text","type":"string","nullable":true,"metadata":{}},{"name":"third_numbergroup","type":"string","nullable":true,"metadata":{}},{"name":"capture_time","type":"long","nullable":true,"metadata":{}},{"name":"insert_time","type":"long","nullable":true,"metadata":{}},{"name":"data_id","type":"string","nullable":true,"metadata":{}},{"name":"data_type","type":"integer","nullable":true,"metadata":{}},{"name":"capture_day","type":"string","nullable":true,"metadata":{}},{"name":"capture_hour","type":"string","nullable":true,"metadata":{}}]}',
+  'spark.sql.sources.schema.partCol.0'='capture_day',
+  'spark.sql.sources.schema.partCol.1'='capture_hour',
+  'transient_lastDdlTime'='1744883115');
