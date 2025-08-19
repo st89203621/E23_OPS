@@ -41,6 +41,21 @@
         dest: "/etc/hosts.backup.{{ backup_suffix }}"
         remote_src: yes
 
+    - name: 清除旧的手动添加的Doris主机映射（避免重复）
+      lineinfile:
+        path: /etc/hosts
+        regexp: '^192\.168\.15\.{{ item }}\s+doris-s\d+.*$'
+        state: absent
+        backup: yes
+      loop: "{{ range(51, 84) | list }}"
+
+    - name: 清除可能存在的旧Doris集群hosts标记块
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} DORIS CLUSTER HOSTS"
+        state: absent
+      ignore_errors: yes
+
     - name: 更新hosts文件 - 添加Doris集群主机名映射（FQDN改造阶段使用旧IP）
       blockinfile:
         path: /etc/hosts
@@ -269,51 +284,63 @@
         backup: yes
       when: "'doris_be' in group_names"
 
-    - name: 移除旧的Doris集群hosts配置
-      blockinfile:
+    - name: 清除所有旧的Doris主机映射（包括手动添加和之前的标记块）
+      lineinfile:
         path: /etc/hosts
-        marker: "# {mark} DORIS CLUSTER HOSTS - FQDN PREPARATION"
+        regexp: '^192\.168\.(15|28)\.{{ item }}\s+doris-s\d+.*$'
         state: absent
         backup: yes
+      loop: "{{ range(51, 84) | list }}"
+
+    - name: 移除旧的Doris集群hosts配置标记块
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} {{ item }}"
+        state: absent
+      loop:
+        - "DORIS CLUSTER HOSTS"
+        - "DORIS CLUSTER HOSTS - FQDN PREPARATION"
+        - "DORIS CLUSTER HOSTS - IP MIGRATION"
+      ignore_errors: yes
 
     - name: 更新hosts文件 - IP迁移阶段（使用新IP）
       blockinfile:
         path: /etc/hosts
         marker: "# {mark} DORIS CLUSTER HOSTS - IP MIGRATION"
         block: |
-          192.168.28.51 doris-s1
-          192.168.28.52 doris-s2
-          192.168.28.53 doris-s3
-          192.168.28.54 doris-s4
-          192.168.28.55 doris-s5
-          192.168.28.56 doris-s6
-          192.168.28.57 doris-s7
-          192.168.28.58 doris-s8
-          192.168.28.59 doris-s9
-          192.168.28.60 doris-s10
-          192.168.28.61 doris-s11
-          192.168.28.62 doris-s12
-          192.168.28.63 doris-s13
-          192.168.28.64 doris-s14
-          192.168.28.65 doris-s15
-          192.168.28.66 doris-s16
-          192.168.28.67 doris-s17
-          192.168.28.68 doris-s18
-          192.168.28.69 doris-s19
-          192.168.28.70 doris-s20
-          192.168.28.71 doris-s21
-          192.168.28.72 doris-s22
-          192.168.28.73 doris-s23
-          192.168.28.74 doris-s24
-          192.168.28.75 doris-s25
-          192.168.28.76 doris-s26
-          192.168.28.77 doris-s27
-          192.168.28.78 doris-s28
-          192.168.28.79 doris-s29
-          192.168.28.80 doris-s30
-          192.168.28.81 doris-s31
-          192.168.28.82 doris-s32
-          192.168.28.83 doris-s33
+          {{ new_network }}.51 doris-s1
+          {{ new_network }}.52 doris-s2
+          {{ new_network }}.53 doris-s3
+          {{ new_network }}.54 doris-s4
+          {{ new_network }}.55 doris-s5
+          {{ new_network }}.56 doris-s6
+          {{ new_network }}.57 doris-s7
+          {{ new_network }}.58 doris-s8
+          {{ new_network }}.59 doris-s9
+          {{ new_network }}.60 doris-s10
+          {{ new_network }}.61 doris-s11
+          {{ new_network }}.62 doris-s12
+          {{ new_network }}.63 doris-s13
+          {{ new_network }}.64 doris-s14
+          {{ new_network }}.65 doris-s15
+          {{ new_network }}.66 doris-s16
+          {{ new_network }}.67 doris-s17
+          {{ new_network }}.68 doris-s18
+          {{ new_network }}.69 doris-s19
+          {{ new_network }}.70 doris-s20
+          {{ new_network }}.71 doris-s21
+          {{ new_network }}.72 doris-s22
+          {{ new_network }}.73 doris-s23
+          {{ new_network }}.74 doris-s24
+          {{ new_network }}.75 doris-s25
+          {{ new_network }}.76 doris-s26
+          {{ new_network }}.77 doris-s27
+          {{ new_network }}.78 doris-s28
+          {{ new_network }}.79 doris-s29
+          {{ new_network }}.80 doris-s30
+          {{ new_network }}.81 doris-s31
+          {{ new_network }}.82 doris-s32
+          {{ new_network }}.83 doris-s33
 
 - name: "阶段2: 启动FE服务"
   hosts: doris_fe
