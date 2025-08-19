@@ -3,9 +3,9 @@
 # 用于在Hadoop集群节点上增量添加Doris集群hosts配置的脚本
 #
 # 使用方法:
-# ansible-playbook -i inventory/hadoop_hosts hadoop-doris-hosts-update.yml
+# ansible-playbook -i inventory/hadoop.ini hadoop-doris-hosts-update.yml
 # 或者指定Doris网络段:
-# ansible-playbook -i inventory/hadoop_hosts hadoop-doris-hosts-update.yml --extra-vars "doris_network=192.168.28"
+# ansible-playbook -i inventory/hadoop.ini hadoop-doris-hosts-update.yml --extra-vars "doris_network=192.168.28"
 
 - name: "增量添加Doris集群hosts配置到Hadoop集群"
   hosts: hadoop_cluster

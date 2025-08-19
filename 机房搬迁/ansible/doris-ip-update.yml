@@ -1,10 +1,15 @@
 ---
 # Ansible Playbook for Doris Cluster IP Migration
-# 基于官方文档的Doris集群IP迁移脚本
 #
 # 使用方法:
-# 阶段1 - FQDN改造: ansible-playbook -i inventory/doris_hosts doris-ip-update.yml --tags "fqdn_setup"
-# 阶段2 - IP迁移: ansible-playbook -i inventory/doris_hosts doris-ip-update.yml --tags "ip_migration" --extra-vars "old_network=192.168.15 new_network=192.168.28"
+# 阶段1 - FQDN改造: ansible-playbook -i inventory/doris_old.ini doris-ip-update.yml --tags "fqdn_setup"
+# 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "old_network=192.168.15 new_network=192.168.28"
+#
+# 注意事项:
+# 1. 阶段1使用doris_old.ini (旧IP: 192.168.15.51-83)
+# 2. 阶段2使用doris_new.ini (新IP: 192.168.28.51-83)
+# 3. 执行前请确保SSH密钥已配置或密码正确
+# 4. 建议先在测试环境验证
 
 - name: "阶段1: Doris集群FQDN改造准备"
   hosts: doris_cluster
@@ -276,39 +281,39 @@
         path: /etc/hosts
         marker: "# {mark} DORIS CLUSTER HOSTS - IP MIGRATION"
         block: |
-          192.168.28.101 doris-s1
-          192.168.28.102 doris-s2
-          192.168.28.103 doris-s3
-          192.168.28.104 doris-s4
-          192.168.28.105 doris-s5
-          192.168.28.106 doris-s6
-          192.168.28.107 doris-s7
-          192.168.28.108 doris-s8
-          192.168.28.109 doris-s9
-          192.168.28.110 doris-s10
-          192.168.28.111 doris-s11
-          192.168.28.112 doris-s12
-          192.168.28.113 doris-s13
-          192.168.28.114 doris-s14
-          192.168.28.115 doris-s15
-          192.168.28.116 doris-s16
-          192.168.28.117 doris-s17
-          192.168.28.118 doris-s18
-          192.168.28.119 doris-s19
-          192.168.28.120 doris-s20
-          192.168.28.121 doris-s21
-          192.168.28.122 doris-s22
-          192.168.28.123 doris-s23
-          192.168.28.124 doris-s24
-          192.168.28.125 doris-s25
-          192.168.28.126 doris-s26
-          192.168.28.127 doris-s27
-          192.168.28.128 doris-s28
-          192.168.28.129 doris-s29
-          192.168.28.130 doris-s30
-          192.168.28.131 doris-s31
-          192.168.28.132 doris-s32
-          192.168.28.133 doris-s33
+          192.168.28.51 doris-s1
+          192.168.28.52 doris-s2
+          192.168.28.53 doris-s3
+          192.168.28.54 doris-s4
+          192.168.28.55 doris-s5
+          192.168.28.56 doris-s6
+          192.168.28.57 doris-s7
+          192.168.28.58 doris-s8
+          192.168.28.59 doris-s9
+          192.168.28.60 doris-s10
+          192.168.28.61 doris-s11
+          192.168.28.62 doris-s12
+          192.168.28.63 doris-s13
+          192.168.28.64 doris-s14
+          192.168.28.65 doris-s15
+          192.168.28.66 doris-s16
+          192.168.28.67 doris-s17
+          192.168.28.68 doris-s18
+          192.168.28.69 doris-s19
+          192.168.28.70 doris-s20
+          192.168.28.71 doris-s21
+          192.168.28.72 doris-s22
+          192.168.28.73 doris-s23
+          192.168.28.74 doris-s24
+          192.168.28.75 doris-s25
+          192.168.28.76 doris-s26
+          192.168.28.77 doris-s27
+          192.168.28.78 doris-s28
+          192.168.28.79 doris-s29
+          192.168.28.80 doris-s30
+          192.168.28.81 doris-s31
+          192.168.28.82 doris-s32
+          192.168.28.83 doris-s33
 
 - name: "阶段2: 启动FE服务"
   hosts: doris_fe
@@ -323,7 +328,7 @@
       shell: |
         cd {{ doris_home }}/fe/bin
         ./start_fe.sh --daemon
-      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".112"  # Master节点
+      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".62"  # Master节点
 
     - name: 等待FE Master启动
       wait_for:
@@ -331,13 +336,13 @@
         host: "{{ ansible_default_ipv4.address.replace(old_network, new_network) }}"
         state: started
         timeout: 120
-      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".112"
+      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".62"
 
     - name: 启动其他FE节点
       shell: |
         cd {{ doris_home }}/fe/bin
-        ./start_fe.sh --helper {{ new_network }}.112:9010 --daemon
-      when: ansible_default_ipv4.address.replace(old_network, new_network) != new_network + ".112"
+        ./start_fe.sh --helper {{ new_network }}.62:9010 --daemon
+      when: ansible_default_ipv4.address.replace(old_network, new_network) != new_network + ".62"
 
     - name: 等待FE节点启动
       wait_for:
@@ -378,7 +383,7 @@
         cd /home/semptian/doris-manager/webserver/bin
         ./start.sh
       ignore_errors: yes
-      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".102"
+      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".52"
 
     - name: 清理并启动Manager Agent
       shell: |
@@ -415,7 +420,7 @@
           请手动执行以下验证和配置步骤：
 
           1. 连接到新的Doris Master节点：
-             mysql -h {{ new_network }}.112 -P 9030 -u root -p123456
+             mysql -h {{ new_network }}.62 -P 9030 -u root -p123456
 
           2. 检查集群状态：
              show frontends;
@@ -455,9 +460,9 @@
              DROP DATABASE IF EXISTS test_doris_rw;
 
           6. 访问管理界面：
-             Doris FE后台: http://{{ new_network }}.101:8030
-             Doris Manager: http://{{ new_network }}.102:8004/1/monitor/dashboard
-             BE后台页面: http://{{ new_network }}.101:8040
+             Doris FE后台: http://{{ new_network }}.51:8030
+             Doris Manager: http://{{ new_network }}.52:8004/1/monitor/dashboard
+             BE后台页面: http://{{ new_network }}.51:8040
 
           7. 如果需要更新其他依赖Doris的服务配置，请更新它们的hosts文件或配置文件中的IP地址。
 
