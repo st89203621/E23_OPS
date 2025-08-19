@@ -164,6 +164,28 @@
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.62:9010" HOSTNAME "doris-s12";
           {% endif %}
 
+    - name: 暂停执行 - 等待手动执行FQDN设置SQL命令
+      pause:
+        prompt: |
+
+          ========================================
+          请按以下步骤手动执行FQDN设置：
+          ========================================
+
+          1. 打开新的终端窗口
+          2. 连接到Doris Master节点：
+             mysql -h 192.168.15.62 -P 9030 -u root -p123456
+
+          3. 执行上面显示的SQL命令
+
+          4. 验证设置是否成功：
+             SHOW FRONTENDS;
+
+          5. 确认完成后，按 Enter 键继续执行下一个FE节点
+
+          ========================================
+          按 Enter 键继续，或按 Ctrl+C 然后 A 键中止执行
+
 - name: "阶段2: IP迁移 - 停止服务和备份"
   hosts: doris_cluster
   gather_facts: yes
@@ -540,4 +562,27 @@
 
           注意：可以考虑每5条命令执行一次，避免一次性执行过多命令。
           ========================================
+      when: "'fqdn_setup' in ansible_run_tags"
+
+    - name: 暂停执行 - 等待手动执行BE节点FQDN设置SQL命令
+      pause:
+        prompt: |
+
+          ========================================
+          请手动执行BE节点FQDN设置：
+          ========================================
+
+          1. 连接到Doris Master节点：
+             mysql -h 192.168.15.62 -P 9030 -u root -p123456
+
+          2. 执行上面显示的所有BE节点FQDN设置SQL命令
+             建议每5条命令执行一次，避免一次性执行过多
+
+          3. 验证设置是否成功：
+             SHOW BACKENDS;
+
+          4. 确认所有BE节点FQDN设置完成后，按 Enter 键继续
+
+          ========================================
+          按 Enter 键继续，或按 Ctrl+C 然后 A 键中止执行
       when: "'fqdn_setup' in ansible_run_tags"
