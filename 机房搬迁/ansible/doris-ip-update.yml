@@ -132,22 +132,6 @@
         create: yes
         backup: yes
 
-    - name: 启动FE节点
-      shell: |
-        cd {{ doris_home }}/fe/bin
-        {% if ansible_default_ipv4.address == "192.168.15.62" %}
-        ./start_fe.sh --daemon
-        {% else %}
-        ./start_fe.sh --daemon
-        {% endif %}
-
-    - name: 等待FE服务启动
-      wait_for:
-        port: 9030
-        host: "{{ ansible_default_ipv4.address }}"
-        state: started
-        timeout: 120
-
     - name: 显示需要手动执行的FQDN设置SQL命令
       debug:
         msg: |
@@ -185,6 +169,24 @@
 
           ========================================
           按 Enter 键继续，或按 Ctrl+C 然后 A 键中止执行
+
+    - name: 启动FE节点
+      shell: |
+        cd {{ doris_home }}/fe/bin
+        {% if ansible_default_ipv4.address == "192.168.15.62" %}
+        ./start_fe.sh --daemon
+        {% else %}
+        ./start_fe.sh --daemon
+        {% endif %}
+
+    - name: 等待FE服务启动
+      wait_for:
+        port: 9030
+        host: "{{ ansible_default_ipv4.address }}"
+        state: started
+        timeout: 120
+
+
 
 - name: "阶段2: IP迁移 - 停止服务和备份"
   hosts: doris_cluster
@@ -330,7 +332,7 @@
         path: /etc/hosts
         marker: "# {mark} DORIS CLUSTER HOSTS - IP MIGRATION"
         block: |
-          {{ new_network }}.51 doris-s1
+          {{ new_network }}.101 doris-s1
           {{ new_network }}.52 doris-s2
           {{ new_network }}.53 doris-s3
           {{ new_network }}.54 doris-s4
