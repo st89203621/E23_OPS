@@ -93,24 +93,45 @@
   gather_facts: yes
   tags: ["fqdn_setup"]
   tasks:
-    - name: 检查并禁用自启动服务
+    - name: 检查并强制停止自启动服务
       shell: |
         for service in be-service fe-service; do
           if systemctl list-unit-files | grep -q "^$service"; then
-            echo "禁用服务: $service"
-            systemctl disable $service
+            echo "停止并禁用服务: $service"
+            systemctl stop $service 2>/dev/null || true
+            systemctl disable $service 2>/dev/null || true
+            systemctl mask $service 2>/dev/null || true
+            echo "服务 $service 已停止、禁用并屏蔽"
           else
             echo "服务不存在，跳过: $service"
           fi
         done
+
+        # 额外检查是否有其他进程管理工具
+        echo "检查可能的进程管理工具..."
+        ps aux | grep -E "(supervisor|systemd|doris)" | grep -v grep || echo "未发现相关进程管理工具"
       ignore_errors: yes
 
-    - name: 停止管理服务
+    - name: 停止管理服务和自动拉起机制
       shell: |
+        # 停止Doris Manager (如果是s2节点)
         {% if inventory_hostname == "doris-s2" %}
         cd /home/semptian/doris-manager/webserver/bin && ./stop 2>/dev/null || true
         {% endif %}
+
+        # 停止Manager Agent
         cd /home/semptian/manager-agent/bin && ./stop.sh 2>/dev/null || true
+
+        # 检查并停止可能的定时任务或监控脚本
+        crontab -l 2>/dev/null | grep -i doris || echo "未发现doris相关定时任务"
+
+        # 检查systemd timer
+        systemctl list-timers | grep -i doris || echo "未发现doris相关定时器"
+
+        # 停止可能的supervisor进程
+        supervisorctl stop all 2>/dev/null || echo "supervisor未运行或不存在"
+
+        echo "管理服务停止完成"
       ignore_errors: yes
 
 - name: "阶段1: 更新hosts文件"
@@ -172,10 +193,42 @@
         cp -r doris-meta doris-meta-bak{{ hostvars['localhost']['backup_suffix'] }}
         cp conf/fe.conf conf/fe.conf-bak{{ hostvars['localhost']['backup_suffix'] }}
 
-    - name: 1. 停止FE节点
+    - name: 1. 强制停止FE节点
       shell: |
         cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
         ./stop_fe.sh
+
+        # 等待几秒钟
+        sleep 3
+
+        # 强制杀死可能残留的进程
+        pkill -f "DorisFE" || true
+        pkill -f "fe.conf" || true
+
+        # 再次确认停止systemd服务（如果存在）
+        systemctl stop fe-service 2>/dev/null || true
+        systemctl mask fe-service 2>/dev/null || true
+
+        echo "FE节点停止完成"
+
+    - name: 1.5. 本地验证FE进程已停止
+      shell: |
+        # 检查FE进程是否还在运行
+        fe_processes=$(ps aux | grep -E "(DorisFE|fe\.conf)" | grep -v grep | wc -l)
+        echo "当前FE进程数量: $fe_processes"
+
+        if [ $fe_processes -gt 0 ]; then
+          echo "警告: 仍有FE进程在运行，尝试强制终止..."
+          pkill -9 -f "DorisFE" || true
+          pkill -9 -f "fe.conf" || true
+          sleep 2
+          fe_processes=$(ps aux | grep -E "(DorisFE|fe\.conf)" | grep -v grep | wc -l)
+          echo "强制终止后FE进程数量: $fe_processes"
+        fi
+
+        # 检查端口是否还在监听
+        netstat -tlnp 2>/dev/null | grep ":9030" || echo "端口9030未在监听"
+        netstat -tlnp 2>/dev/null | grep ":9010" || echo "端口9010未在监听"
 
     - name: 2. 验证节点已停止 (检查Alive状态变为false)
       shell: |
@@ -184,12 +237,14 @@
       retries: 12
       delay: 5
       until: fe_stopped.rc == 0
+      delegate_to: localhost
 
     - name: 3. 设置FQDN
       shell: |
         mysql {{ hostvars['localhost']['mysql_conn'] }} -e "
         ALTER SYSTEM MODIFY FRONTEND '{{ ansible_default_ipv4.address }}:9010' HOSTNAME '{{ inventory_hostname }}';"
       register: fqdn_result
+      delegate_to: localhost
 
     - name: 4. 修改节点配置启用FQDN模式
       lineinfile:
@@ -213,6 +268,7 @@
       register: fe_status
       retries: 5
       delay: 10
+      delegate_to: localhost
 
     - name: 显示节点状态
       debug:
@@ -445,6 +501,7 @@
       register: master_status
       retries: 5
       delay: 10
+      delegate_to: localhost
 
     - name: 显示Master状态
       debug:
@@ -481,6 +538,7 @@
       register: fe_status
       retries: 5
       delay: 10
+      delegate_to: localhost
 
     - name: 显示FE节点状态
       debug:
