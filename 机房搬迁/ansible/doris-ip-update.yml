@@ -7,7 +7,7 @@
 # 全局变量和前置检查
 - name: "设置全局变量和前置检查"
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   tags: ["always"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
@@ -19,7 +19,8 @@
       set_fact:
         doris_home: "{{ doris_home }}"
         mysql_conn: "{{ mysql_conn }}"
-        backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+        backup_suffix: "{{ ansible_date_time.epoch }}"
+        timestamp: "{{ ansible_date_time.epoch }}"
         
     - name: 前置条件检查提醒
       debug:
@@ -272,7 +273,7 @@
 # 阶段2: IP迁移
 - name: "阶段2: 验证参数和记录状态"
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   tags: ["ip_migration"]
   tasks:
     - name: 检查new_network参数
@@ -285,7 +286,7 @@
         mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "
         SHOW FRONTENDS;
         SHOW BACKENDS;
-        SHOW PROC '/backends';" > /tmp/doris_cluster_status_before_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.log
+        SHOW PROC '/backends';" > /tmp/doris_cluster_status_before_migration_{{ hostvars['localhost']['timestamp'] }}.log
       ignore_errors: yes
 
 - name: "阶段2: 停止所有Doris服务"
@@ -328,7 +329,7 @@
 
 - name: "阶段2: 停止Master FE服务"
   hosts: doris-s12
-  gather_facts: no
+  gather_facts: yes
   tags: ["ip_migration"]
   tasks:
     - name: 停止Master FE服务
@@ -347,8 +348,8 @@
     - name: 最终备份Master元数据
       shell: |
         cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe
-        cp -r doris-meta doris-meta-bak{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}-final
-        cp conf/fe.conf conf/fe.conf-bak{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}-final
+        cp -r doris-meta doris-meta-bak{{ hostvars['localhost']['timestamp'] }}-final
+        cp conf/fe.conf conf/fe.conf-bak{{ hostvars['localhost']['timestamp'] }}-final
 
     - name: 确认所有Doris进程已停止
       shell: ps -ef | grep doris | grep -v grep
@@ -553,7 +554,7 @@
 
 - name: "阶段2: 等待集群稳定并开启分片均衡"
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   tags: ["ip_migration"]
   tasks:
     - name: 等待集群完全稳定
@@ -605,14 +606,14 @@
 
 - name: "阶段2: 数据完整性验证"
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   tags: ["ip_migration", "verification"]
   tasks:
     - name: 执行读写测试
       shell: |
         mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "
-        CREATE DATABASE IF NOT EXISTS test_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }};
-        USE test_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }};
+        CREATE DATABASE IF NOT EXISTS test_migration_{{ ansible_date_time.epoch }};
+        USE test_migration_{{ ansible_date_time.epoch }};
         CREATE TABLE IF NOT EXISTS test_table (
           id BIGINT,
           name VARCHAR(64),
@@ -629,7 +630,7 @@
 
         SELECT COUNT(*) as test_count FROM test_table;
 
-        DROP DATABASE test_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }};"
+        DROP DATABASE test_migration_{{ ansible_date_time.epoch }};"
       register: rw_test_result
       ignore_errors: yes
 
@@ -653,7 +654,7 @@
         SHOW FRONTENDS;
         SHOW BACKENDS;
         SHOW PROC '/backends';
-        SHOW PROC '/statistic';" > /tmp/doris_cluster_status_after_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.log
+        SHOW PROC '/statistic';" > /tmp/doris_cluster_status_after_migration_{{ ansible_date_time.epoch }}.log
 
     - name: 显示迁移完成信息
       debug:
@@ -674,7 +675,7 @@
           - 分片均衡: {{ '已开启' if alive_be_count.stdout | int >= 30 else '待手动开启' }}
 
           📁 状态文件：
-          - 迁移后状态: /tmp/doris_cluster_status_after_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.log
+          - 迁移后状态: /tmp/doris_cluster_status_after_migration_{{ ansible_date_time.epoch }}.log
 
           ⚠️  后续操作：
           1. 更新其他依赖服务的配置文件
@@ -713,5 +714,5 @@
           - FE配置: {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/conf/fe.conf-bak*
           - BE配置: {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/be/conf/be.conf-bak*
           - 元数据: {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/doris-meta-bak*
-        dest: "/tmp/doris_migration_report_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.md"
+        dest: "/tmp/doris_migration_report_{{ ansible_date_time.epoch }}.md"
       delegate_to: localhost
