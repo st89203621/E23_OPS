@@ -51,6 +51,13 @@
           请确认已经执行上述SQL命令关闭分片均衡功能后，按 Enter 键继续
           或按 Ctrl+C 然后 A 键中止执行
 
+    - name: 停止Doris Manager
+      shell: |
+        cd /home/semptian/doris-manager/webserver/bin
+        ./stop
+      ignore_errors: yes
+      when: inventory_hostname == "doris-s2"
+
     - name: 停止Doris Manager Agent
       shell: |
         cd /home/semptian/manager-agent/bin
@@ -228,19 +235,6 @@
     - name: 显示IP迁移信息
       debug:
         msg: "正在将Doris集群从 {{ old_network }}.x 迁移到 {{ new_network }}.x"
-
-    - name: 停止Doris Manager
-      shell: |
-        cd /home/semptian/doris-manager/webserver/bin
-        ./stop
-      ignore_errors: yes
-      when: inventory_hostname == "doris-s2"
-
-    - name: 停止Doris Manager Agent
-      shell: |
-        cd /home/semptian/manager-agent/bin
-        ./stop.sh
-      ignore_errors: yes
 
 - name: "阶段2: 停止BE节点"
   hosts: doris_be
