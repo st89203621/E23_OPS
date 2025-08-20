@@ -224,29 +224,6 @@
         msg: "请提供 old_network 和 new_network 变量，例如: --extra-vars 'old_network=192.168.15 new_network=192.168.28'"
       when: old_network is not defined or new_network is not defined
 
-    - name: 显示关闭分片均衡的提示信息（IP迁移阶段）
-      debug:
-        msg: |
-          ========================================
-          重要提示：在停止服务前，请确认分片均衡功能已关闭
-          ========================================
-
-          如果在阶段1中未关闭分片均衡，请现在连接到Master节点执行：
-          mysql -h 192.168.15.62 -P 9030 -u root -p123456
-
-          执行以下SQL命令关闭分片均衡：
-          admin set frontend config("disable_balance" = "true");
-          admin set frontend config("disable_colocate_balance" = "true");
-          admin set frontend config("disable_tablet_scheduler" = "true");
-
-          ========================================
-
-    - name: 暂停执行 - 确认分片均衡已关闭
-      pause:
-        prompt: |
-          请确认分片均衡功能已关闭后，按 Enter 键继续
-          或按 Ctrl+C 然后 A 键中止执行
-
   tasks:
     - name: 显示IP迁移信息
       debug:
