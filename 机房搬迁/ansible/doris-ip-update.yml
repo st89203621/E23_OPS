@@ -5,11 +5,6 @@
 # 阶段1 - FQDN改造: ansible-playbook -i inventory/doris_old.ini doris-ip-update.yml --tags "fqdn_setup"
 # 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "old_network=192.168.15 new_network=192.168.28"
 #
-# 注意事项:
-# 1. 阶段1使用doris_old.ini (旧IP: 192.168.15.51-83)
-# 2. 阶段2使用doris_new.ini (新IP: 192.168.28.51-83)
-# 3. 执行前请确保SSH密钥已配置或密码正确
-# 4. 建议先在测试环境验证
 
 - name: "阶段1: Doris集群FQDN改造准备"
   hosts: doris_cluster
@@ -115,7 +110,7 @@
       shell: |
         cd {{ doris_home }}/fe/bin
         ./stop_fe.sh
-      when: ansible_default_ipv4.address != "192.168.15.62"  # Master节点最后停止（FQDN阶段使用旧IP）
+      when: inventory_hostname != "doris-s12"  # Master节点最后停止（使用主机名判断）
 
     - name: 等待FE服务停止
       wait_for:
@@ -123,7 +118,7 @@
         host: "{{ ansible_default_ipv4.address }}"
         state: stopped
         timeout: 60
-      when: ansible_default_ipv4.address != "192.168.15.62"
+      when: inventory_hostname != "doris-s12"
 
     - name: 修改FE配置启用FQDN模式
       lineinfile:
@@ -136,15 +131,15 @@
       debug:
         msg: |
           请在Doris MySQL客户端中手动执行以下命令来设置FQDN（FQDN改造阶段使用旧IP）:
-          {% if ansible_default_ipv4.address == "192.168.15.51" %}
+          {% if inventory_hostname == "doris-s1" %}
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.51:9010" HOSTNAME "doris-s1";
-          {% elif ansible_default_ipv4.address == "192.168.15.53" %}
+          {% elif inventory_hostname == "doris-s3" %}
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.53:9010" HOSTNAME "doris-s3";
-          {% elif ansible_default_ipv4.address == "192.168.15.61" %}
+          {% elif inventory_hostname == "doris-s11" %}
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.61:9010" HOSTNAME "doris-s11";
-          {% elif ansible_default_ipv4.address == "192.168.15.70" %}
+          {% elif inventory_hostname == "doris-s20" %}
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.70:9010" HOSTNAME "doris-s20";
-          {% elif ansible_default_ipv4.address == "192.168.15.62" %}
+          {% elif inventory_hostname == "doris-s12" %}
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.62:9010" HOSTNAME "doris-s12";
           {% endif %}
 
@@ -173,7 +168,7 @@
     - name: 启动FE节点
       shell: |
         cd {{ doris_home }}/fe/bin
-        {% if ansible_default_ipv4.address == "192.168.15.62" %}
+        {% if inventory_hostname == "doris-s12" %}
         ./start_fe.sh --daemon
         {% else %}
         ./start_fe.sh --daemon
@@ -212,7 +207,7 @@
         cd /home/semptian/doris-manager/webserver/bin
         ./stop
       ignore_errors: yes
-      when: ansible_default_ipv4.address == "192.168.15.52"
+      when: inventory_hostname == "doris-s2"
 
     - name: 停止Doris Manager Agent
       shell: |
@@ -272,7 +267,7 @@
         cd {{ doris_home }}/fe
         cp -r ./doris-meta ./doris-meta-bak{{ backup_suffix }}-fqdn
         cp ./conf/fe.conf ./conf/fe.conf-bak{{ backup_suffix }}-fqdn
-      when: ansible_default_ipv4.address == "192.168.15.62"
+      when: inventory_hostname == "doris-s12"
 
     - name: 确认所有Doris进程已停止
       shell: ps -ef | grep doris | grep -v grep
@@ -333,38 +328,38 @@
         marker: "# {mark} DORIS CLUSTER HOSTS - IP MIGRATION"
         block: |
           {{ new_network }}.101 doris-s1
-          {{ new_network }}.52 doris-s2
-          {{ new_network }}.53 doris-s3
-          {{ new_network }}.54 doris-s4
-          {{ new_network }}.55 doris-s5
-          {{ new_network }}.56 doris-s6
-          {{ new_network }}.57 doris-s7
-          {{ new_network }}.58 doris-s8
-          {{ new_network }}.59 doris-s9
-          {{ new_network }}.60 doris-s10
-          {{ new_network }}.61 doris-s11
-          {{ new_network }}.62 doris-s12
-          {{ new_network }}.63 doris-s13
-          {{ new_network }}.64 doris-s14
-          {{ new_network }}.65 doris-s15
-          {{ new_network }}.66 doris-s16
-          {{ new_network }}.67 doris-s17
-          {{ new_network }}.68 doris-s18
-          {{ new_network }}.69 doris-s19
-          {{ new_network }}.70 doris-s20
-          {{ new_network }}.71 doris-s21
-          {{ new_network }}.72 doris-s22
-          {{ new_network }}.73 doris-s23
-          {{ new_network }}.74 doris-s24
-          {{ new_network }}.75 doris-s25
-          {{ new_network }}.76 doris-s26
-          {{ new_network }}.77 doris-s27
-          {{ new_network }}.78 doris-s28
-          {{ new_network }}.79 doris-s29
-          {{ new_network }}.80 doris-s30
-          {{ new_network }}.81 doris-s31
-          {{ new_network }}.82 doris-s32
-          {{ new_network }}.83 doris-s33
+          {{ new_network }}.102 doris-s2
+          {{ new_network }}.103 doris-s3
+          {{ new_network }}.104 doris-s4
+          {{ new_network }}.105 doris-s5
+          {{ new_network }}.106 doris-s6
+          {{ new_network }}.107 doris-s7
+          {{ new_network }}.108 doris-s8
+          {{ new_network }}.109 doris-s9
+          {{ new_network }}.110 doris-s10
+          {{ new_network }}.111 doris-s11
+          {{ new_network }}.112 doris-s12
+          {{ new_network }}.113 doris-s13
+          {{ new_network }}.114 doris-s14
+          {{ new_network }}.115 doris-s15
+          {{ new_network }}.116 doris-s16
+          {{ new_network }}.117 doris-s17
+          {{ new_network }}.118 doris-s18
+          {{ new_network }}.119 doris-s19
+          {{ new_network }}.120 doris-s20
+          {{ new_network }}.121 doris-s21
+          {{ new_network }}.122 doris-s22
+          {{ new_network }}.123 doris-s23
+          {{ new_network }}.124 doris-s24
+          {{ new_network }}.125 doris-s25
+          {{ new_network }}.126 doris-s26
+          {{ new_network }}.127 doris-s27
+          {{ new_network }}.128 doris-s28
+          {{ new_network }}.129 doris-s29
+          {{ new_network }}.130 doris-s30
+          {{ new_network }}.131 doris-s31
+          {{ new_network }}.132 doris-s32
+          {{ new_network }}.133 doris-s33
 
 - name: "阶段2: 启动FE服务"
   hosts: doris_fe
@@ -373,32 +368,40 @@
   tags: ["ip_migration", "start_fe"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+    # 定义IP映射表
+    ip_mapping:
+      doris-s1: "{{ new_network }}.101"
+      doris-s2: "{{ new_network }}.102"
+      doris-s3: "{{ new_network }}.103"
+      doris-s11: "{{ new_network }}.111"
+      doris-s12: "{{ new_network }}.112"
+      doris-s20: "{{ new_network }}.120"
 
   tasks:
     - name: 启动FE Master节点
       shell: |
         cd {{ doris_home }}/fe/bin
         ./start_fe.sh --daemon
-      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".62"  # Master节点
+      when: inventory_hostname == "doris-s12"  # Master节点
 
     - name: 等待FE Master启动
       wait_for:
         port: 9030
-        host: "{{ ansible_default_ipv4.address.replace(old_network, new_network) }}"
+        host: "{{ ip_mapping[inventory_hostname] }}"
         state: started
         timeout: 120
-      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".62"
+      when: inventory_hostname == "doris-s12"
 
     - name: 启动其他FE节点
       shell: |
         cd {{ doris_home }}/fe/bin
-        ./start_fe.sh --helper {{ new_network }}.62:9010 --daemon
-      when: ansible_default_ipv4.address.replace(old_network, new_network) != new_network + ".62"
+        ./start_fe.sh --helper {{ new_network }}.112:9010 --daemon
+      when: inventory_hostname != "doris-s12"
 
     - name: 等待FE节点启动
       wait_for:
         port: 9030
-        host: "{{ ansible_default_ipv4.address.replace(old_network, new_network) }}"
+        host: "{{ ip_mapping[inventory_hostname] }}"
         state: started
         timeout: 120
 
@@ -409,6 +412,41 @@
   tags: ["ip_migration", "start_be"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+    # 定义完整的IP映射表
+    ip_mapping:
+      doris-s1: "{{ new_network }}.101"
+      doris-s2: "{{ new_network }}.102"
+      doris-s3: "{{ new_network }}.103"
+      doris-s4: "{{ new_network }}.104"
+      doris-s5: "{{ new_network }}.105"
+      doris-s6: "{{ new_network }}.106"
+      doris-s7: "{{ new_network }}.107"
+      doris-s8: "{{ new_network }}.108"
+      doris-s9: "{{ new_network }}.109"
+      doris-s10: "{{ new_network }}.110"
+      doris-s11: "{{ new_network }}.111"
+      doris-s12: "{{ new_network }}.112"
+      doris-s13: "{{ new_network }}.113"
+      doris-s14: "{{ new_network }}.114"
+      doris-s15: "{{ new_network }}.115"
+      doris-s16: "{{ new_network }}.116"
+      doris-s17: "{{ new_network }}.117"
+      doris-s18: "{{ new_network }}.118"
+      doris-s19: "{{ new_network }}.119"
+      doris-s20: "{{ new_network }}.120"
+      doris-s21: "{{ new_network }}.121"
+      doris-s22: "{{ new_network }}.122"
+      doris-s23: "{{ new_network }}.123"
+      doris-s24: "{{ new_network }}.124"
+      doris-s25: "{{ new_network }}.125"
+      doris-s26: "{{ new_network }}.126"
+      doris-s27: "{{ new_network }}.127"
+      doris-s28: "{{ new_network }}.128"
+      doris-s29: "{{ new_network }}.129"
+      doris-s30: "{{ new_network }}.130"
+      doris-s31: "{{ new_network }}.131"
+      doris-s32: "{{ new_network }}.132"
+      doris-s33: "{{ new_network }}.133"
 
   tasks:
     - name: 启动BE服务
@@ -419,7 +457,7 @@
     - name: 等待BE服务启动
       wait_for:
         port: 9060
-        host: "{{ ansible_default_ipv4.address.replace(old_network, new_network) }}"
+        host: "{{ ip_mapping[inventory_hostname] }}"
         state: started
         timeout: 120
 
@@ -434,7 +472,7 @@
         cd /home/semptian/doris-manager/webserver/bin
         ./start.sh
       ignore_errors: yes
-      when: ansible_default_ipv4.address.replace(old_network, new_network) == new_network + ".52"
+      when: inventory_hostname == "doris-s2"
 
     - name: 清理并启动Manager Agent
       shell: |
@@ -471,7 +509,7 @@
           请手动执行以下验证和配置步骤：
 
           1. 连接到新的Doris Master节点：
-             mysql -h {{ new_network }}.62 -P 9030 -u root -p123456
+             mysql -h {{ new_network }}.112 -P 9030 -u root -p123456
 
           2. 检查集群状态：
              show frontends;
@@ -511,9 +549,9 @@
              DROP DATABASE IF EXISTS test_doris_rw;
 
           6. 访问管理界面：
-             Doris FE后台: http://{{ new_network }}.51:8030
-             Doris Manager: http://{{ new_network }}.52:8004/1/monitor/dashboard
-             BE后台页面: http://{{ new_network }}.51:8040
+             Doris FE后台: http://{{ new_network }}.101:8030
+             Doris Manager: http://{{ new_network }}.102:8004/1/monitor/dashboard
+             BE后台页面: http://{{ new_network }}.101:8040
 
           7. 如果需要更新其他依赖Doris的服务配置，请更新它们的hosts文件或配置文件中的IP地址。
 
@@ -561,6 +599,8 @@
           ALTER SYSTEM MODIFY BACKEND "192.168.15.81:9050" HOSTNAME "doris-s31";
           ALTER SYSTEM MODIFY BACKEND "192.168.15.82:9050" HOSTNAME "doris-s32";
           ALTER SYSTEM MODIFY BACKEND "192.168.15.83:9050" HOSTNAME "doris-s33";
+
+          注意：BE节点使用心跳端口9050进行FQDN设置。
 
           注意：可以考虑每5条命令执行一次，避免一次性执行过多命令。
           ========================================
