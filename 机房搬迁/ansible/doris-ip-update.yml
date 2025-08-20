@@ -9,7 +9,7 @@
 - name: "阶段1: Doris集群FQDN改造准备"
   hosts: doris_cluster
   gather_facts: yes
-  tags: ["fqdn_setup", "preparation"]
+  tags: ["fqdn_setup"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
     backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
@@ -339,7 +339,6 @@
         state: absent
       loop:
         - "DORIS CLUSTER HOSTS"
-        - "DORIS CLUSTER HOSTS - FQDN PREPARATION"
         - "DORIS CLUSTER HOSTS - IP MIGRATION"
       ignore_errors: yes
 
