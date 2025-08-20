@@ -124,10 +124,21 @@
         dest: "/etc/hosts.backup.{{ hostvars['localhost']['backup_suffix'] }}"
         remote_src: yes
 
-    - name: 清理旧的Doris hosts配置
+    - name: 彻底清理旧的Doris hosts配置
       shell: |
-        sed -i '/192\.168\.(15|28)\.[0-9]\+ doris-s[0-9]\+/d' /etc/hosts
+        # 备份当前hosts文件
+        cp /etc/hosts /etc/hosts.pre-clean.{{ hostvars['localhost']['backup_suffix'] }}
+
+        # 删除所有包含doris-s的行（无论IP段）
+        sed -i '/doris-s[0-9]\+/d' /etc/hosts
+
+        # 删除DORIS CLUSTER标记块（如果存在）
         sed -i '/# BEGIN DORIS CLUSTER/,/# END DORIS CLUSTER/d' /etc/hosts
+
+        # 删除可能的空行
+        sed -i '/^$/N;/^\n$/d' /etc/hosts
+
+        echo "清理完成，已删除所有doris-s相关条目"
 
     - name: 生成hosts映射内容
       set_fact:
