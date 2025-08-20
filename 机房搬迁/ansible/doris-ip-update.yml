@@ -6,38 +6,77 @@
 # 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "new_network=192.168.28"
 #
 
+- name: "阶段1: 检查MySQL客户端依赖"
+  hosts: localhost
+  gather_facts: no
+  tags: ["fqdn_setup"]
+
+  tasks:
+    - name: 检查控制节点MySQL客户端
+      shell: command -v mysql
+      register: mysql_check
+      ignore_errors: yes
+
+    - name: MySQL客户端未安装 - 退出
+      fail:
+        msg: |
+          错误：未安装MySQL客户端
+          请先安装：sudo apt install mysql-client
+          然后重新执行脚本
+      when: mysql_check.rc != 0
+
+- name: "阶段1: 检查Doris节点MySQL客户端"
+  hosts: doris_cluster
+  gather_facts: no
+  tags: ["fqdn_setup"]
+
+  tasks:
+    - name: 检查MySQL客户端
+      shell: command -v mysql
+      register: mysql_check_nodes
+      ignore_errors: yes
+
+    - name: MySQL客户端未安装 - 退出
+      fail:
+        msg: |
+          错误：节点 {{ inventory_hostname }} 未安装MySQL客户端
+          请安装：sudo apt install mysql-client
+          批量安装：ansible doris_cluster -i inventory/doris_old.ini -m shell -a "apt install -y mysql-client" --become
+      when: mysql_check_nodes.rc != 0
+
 - name: "阶段1: 显示关闭分片均衡提示（仅在控制节点执行）"
   hosts: localhost
   gather_facts: no
   tags: ["fqdn_setup"]
 
   tasks:
-    - name: 显示关闭分片均衡的提示信息
+    - name: 自动关闭分片均衡功能
+      shell: |
+        mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "
+        admin set frontend config('disable_balance' = 'true');
+        admin set frontend config('disable_colocate_balance' = 'true');
+        admin set frontend config('disable_tablet_scheduler' = 'true');
+        admin show frontend config like '%balance%';
+        admin show frontend config like '%scheduler%';"
+      register: balance_disable_result
+      ignore_errors: yes
+
+    - name: 显示分片均衡关闭结果
+      debug:
+        var: balance_disable_result.stdout_lines
+
+    - name: 验证分片均衡是否成功关闭
+      shell: |
+        mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "
+        admin show frontend config like '%balance%';" | grep -E "(disable_balance|disable_colocate_balance|disable_tablet_scheduler)" | grep "true"
+      register: balance_verify
+      ignore_errors: yes
+
+    - name: 显示验证结果
       debug:
         msg: |
-          ========================================
-          重要提示：在停止FE服务前，请先关闭分片均衡功能
-          ========================================
-
-          请在继续执行前，手动连接到Doris Master节点执行以下命令：
-          mysql -h 192.168.15.62 -P 9030 -u root -p123456
-
-          执行以下SQL命令关闭分片均衡：
-          admin set frontend config("disable_balance" = "true");
-          admin set frontend config("disable_colocate_balance" = "true");
-          admin set frontend config("disable_tablet_scheduler" = "true");
-
-          验证设置是否生效：
-          admin show frontend config like "%balance%";
-          admin show frontend config like "%scheduler%";
-
-          ========================================
-
-    - name: 暂停执行 - 等待手动关闭分片均衡
-      pause:
-        prompt: |
-          请确认已经执行上述SQL命令关闭分片均衡功能后，按 Enter 键继续
-          或按 Ctrl+C 然后 A 键中止执行
+          分片均衡功能关闭状态验证:
+          {{ balance_verify.stdout_lines if balance_verify.stdout_lines else '验证失败，请手动检查' }}
 
 - name: "阶段1: Doris集群FQDN改造准备"
   hosts: doris_cluster
@@ -221,6 +260,26 @@
         seconds: 30
         prompt: "等待 {{ inventory_hostname }} 完全稳定，30秒后继续下一个节点..."
 
+- name: "阶段1: 检测当前Master并准备Master节点FQDN改造"
+  hosts: localhost
+  gather_facts: no
+  tags: ["fqdn_setup"]
+
+  tasks:
+    - name: 检测当前Master节点
+      shell: |
+        mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "SHOW FRONTENDS;" | grep -E "true.*MASTER" | awk '{print $2}'
+      register: current_master_ip
+      ignore_errors: yes
+
+    - name: 显示当前Master信息
+      debug:
+        msg: "当前Master节点IP: {{ current_master_ip.stdout }}"
+
+    - name: 设置Master连接信息
+      set_fact:
+        master_connect_ip: "{{ current_master_ip.stdout if current_master_ip.stdout != '' else '192.168.15.62' }}"
+
 - name: "阶段1: Master FE节点FQDN改造 - 最后重启"
   hosts: doris-s12
   gather_facts: yes
@@ -243,19 +302,7 @@
         create: yes
         backup: yes
 
-    - name: 执行Master节点FQDN设置SQL命令
-      shell: |
-        mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "
-        ALTER SYSTEM MODIFY FRONTEND '192.168.15.62:9010' HOSTNAME 'doris-s12';
-        SHOW FRONTENDS;"
-      register: master_fqdn_result
-      ignore_errors: yes
-
-    - name: 显示Master FQDN设置结果
-      debug:
-        var: master_fqdn_result.stdout_lines
-
-    - name: 停止Master FE节点（最后重启）
+    - name: 停止Master FE节点（触发重新选主）
       shell: |
         cd {{ doris_home }}/fe/bin
         ./stop_fe.sh
@@ -267,28 +314,82 @@
         state: stopped
         timeout: 60
 
-    - name: 启动Master FE节点
+    - name: 等待新Master选举完成
+      pause:
+        seconds: 30
+        prompt: "等待新Master选举完成..."
+
+- name: "阶段1: 检测新Master并执行原Master节点FQDN设置"
+  hosts: localhost
+  gather_facts: no
+  tags: ["fqdn_setup"]
+
+  tasks:
+    - name: 检测新选举的Master节点
+      shell: |
+        # 尝试连接所有可能的FE节点，找到新的Master
+        for ip in 192.168.15.51 192.168.15.53 192.168.15.61 192.168.15.70; do
+          result=$(mysql -h $ip -P 9030 -u root -p123456 -e "SHOW FRONTENDS;" 2>/dev/null | grep -E "true.*MASTER" | awk '{print $2}')
+          if [ ! -z "$result" ]; then
+            echo $ip
+            break
+          fi
+        done
+      register: new_master_ip
+      retries: 5
+      delay: 10
+
+    - name: 显示新Master信息
+      debug:
+        msg: "新选举的Master节点IP: {{ new_master_ip.stdout }}"
+
+    - name: 在新Master上执行原Master节点FQDN设置
+      shell: |
+        mysql -h {{ new_master_ip.stdout }} -P 9030 -u root -p123456 -e "
+        ALTER SYSTEM MODIFY FRONTEND '192.168.15.62:9010' HOSTNAME 'doris-s12';
+        SHOW FRONTENDS;"
+      register: master_fqdn_result
+      when: new_master_ip.stdout != ""
+
+    - name: 显示Master FQDN设置结果
+      debug:
+        var: master_fqdn_result.stdout_lines
+      when: master_fqdn_result is defined
+
+- name: "阶段1: 启动原Master节点"
+  hosts: doris-s12
+  gather_facts: yes
+  tags: ["fqdn_setup"]
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+
+  tasks:
+    - name: 启动原Master FE节点（现在作为Follower加入）
       shell: |
         cd {{ doris_home }}/fe/bin
-        ./start_fe.sh --daemon
+        # 使用helper模式加入集群，让新Master保持Master角色
+        ./start_fe.sh --helper {{ hostvars['localhost']['new_master_ip']['stdout'] }}:9010 --daemon
+      when: hostvars['localhost']['new_master_ip']['stdout'] != ""
 
-    - name: 等待Master FE服务启动
+    - name: 等待FE服务启动
       wait_for:
         port: 9030
         host: "{{ ansible_default_ipv4.address }}"
         state: started
         timeout: 120
 
-    - name: 验证Master节点状态和集群状态
+    - name: 验证集群最终状态
       shell: |
-        mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "SHOW FRONTENDS;"
+        mysql -h {{ hostvars['localhost']['new_master_ip']['stdout'] }} -P 9030 -u root -p123456 -e "SHOW FRONTENDS;"
       register: final_fe_status
       retries: 3
       delay: 10
+      when: hostvars['localhost']['new_master_ip']['stdout'] != ""
 
     - name: 显示最终FE集群状态
       debug:
         var: final_fe_status.stdout_lines
+      when: final_fe_status is defined
 
 
 
