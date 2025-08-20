@@ -93,11 +93,16 @@
   gather_facts: yes
   tags: ["fqdn_setup"]
   tasks:
-    - name: 禁用自启动服务
-      systemd:
-        name: "{{ item }}"
-        enabled: no
-      loop: ["be-service", "fe-service"]
+    - name: 检查并禁用自启动服务
+      shell: |
+        for service in be-service fe-service; do
+          if systemctl list-unit-files | grep -q "^$service"; then
+            echo "禁用服务: $service"
+            systemctl disable $service
+          else
+            echo "服务不存在，跳过: $service"
+          fi
+        done
       ignore_errors: yes
 
     - name: 停止管理服务
@@ -556,11 +561,16 @@
         ./start.sh
       ignore_errors: yes
 
-    - name: 恢复开机自启动
-      systemd:
-        name: "{{ item }}"
-        enabled: yes
-      loop: ["be-service", "fe-service"]
+    - name: 检查并恢复开机自启动
+      shell: |
+        for service in be-service fe-service; do
+          if systemctl list-unit-files | grep -q "^$service"; then
+            echo "启用服务: $service"
+            systemctl enable $service
+          else
+            echo "服务不存在，跳过: $service"
+          fi
+        done
       ignore_errors: yes
 
 - name: "阶段2: 等待集群稳定并开启分片均衡"
