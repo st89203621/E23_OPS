@@ -6,24 +6,12 @@
 # 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "old_network=192.168.15 new_network=192.168.28"
 #
 
-- name: "阶段1: Doris集群FQDN改造准备"
-  hosts: doris_cluster
-  gather_facts: yes
+- name: "阶段1: 显示关闭分片均衡提示（仅在控制节点执行）"
+  hosts: localhost
+  gather_facts: no
   tags: ["fqdn_setup"]
-  vars:
-    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
-    backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
 
   tasks:
-    - name: 禁用开机自启动服务
-      systemd:
-        name: "{{ item }}"
-        enabled: no
-      loop:
-        - be-service
-        - fe-service
-      ignore_errors: yes
-
     - name: 显示关闭分片均衡的提示信息
       debug:
         msg: |
@@ -51,6 +39,24 @@
           请确认已经执行上述SQL命令关闭分片均衡功能后，按 Enter 键继续
           或按 Ctrl+C 然后 A 键中止执行
 
+- name: "阶段1: Doris集群FQDN改造准备"
+  hosts: doris_cluster
+  gather_facts: yes
+  tags: ["fqdn_setup"]
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+    backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+
+  tasks:
+    - name: 禁用开机自启动服务
+      systemd:
+        name: "{{ item }}"
+        enabled: no
+      loop:
+        - be-service
+        - fe-service
+      ignore_errors: yes
+
     - name: 停止Doris Manager
       shell: |
         cd /home/semptian/doris-manager/webserver/bin
@@ -64,6 +70,15 @@
         ./stop.sh
       ignore_errors: yes
 
+- name: "阶段1: 更新hosts文件（避免FE/BE混合节点重复操作）"
+  hosts: doris_cluster
+  gather_facts: yes
+  tags: ["fqdn_setup"]
+  vars:
+    backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+  run_once: false
+
+  tasks:
     - name: 创建原始hosts文件备份
       copy:
         src: /etc/hosts
@@ -164,6 +179,9 @@
     - name: 显示需要手动执行的FQDN设置SQL命令
       debug:
         msg: |
+          ========================================
+          当前节点: {{ inventory_hostname }}
+          ========================================
           请在Doris MySQL客户端中手动执行以下命令来设置FQDN（FQDN改造阶段使用旧IP）:
           {% if inventory_hostname == "doris-s1" %}
           ALTER SYSTEM MODIFY FRONTEND "192.168.15.51:9010" HOSTNAME "doris-s1";
@@ -300,8 +318,8 @@
         var: doris_processes.stdout_lines
       when: doris_processes.stdout_lines | length > 0
 
-- name: "阶段2: 更新配置文件"
-  hosts: doris_cluster
+- name: "阶段2: 更新配置文件（分组执行避免重复）"
+  hosts: doris_fe
   gather_facts: yes
   tags: ["ip_migration", "update_config"]
   vars:
@@ -314,16 +332,28 @@
         regexp: '^priority_networks\s*='
         line: "priority_networks = {{ new_network }}.0/24"
         backup: yes
-      when: "'doris_fe' in group_names"
 
+- name: "阶段2: 更新BE配置文件"
+  hosts: doris_be
+  gather_facts: yes
+  tags: ["ip_migration", "update_config"]
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+
+  tasks:
     - name: 更新BE配置文件 - priority_networks
       lineinfile:
         path: "{{ doris_home }}/be/conf/be.conf"
         regexp: '^priority_networks\s*='
         line: "priority_networks = {{ new_network }}.0/24"
         backup: yes
-      when: "'doris_be' in group_names"
 
+- name: "阶段2: 更新hosts文件（所有节点）"
+  hosts: doris_cluster
+  gather_facts: yes
+  tags: ["ip_migration", "update_config"]
+
+  tasks:
     - name: 清除所有旧的Doris主机映射（包括手动添加和之前的标记块）
       lineinfile:
         path: /etc/hosts
@@ -493,8 +523,8 @@
       debug:
         msg: "BE节点 {{ inventory_hostname }} ({{ ip_mapping[inventory_hostname] }}) 健康检查: {{ 'OK' if be_health_check.status == 200 else 'FAILED' }}"
 
-- name: "阶段2: 启动管理服务"
-  hosts: doris_cluster
+- name: "阶段2: 启动Doris Manager"
+  hosts: doris-s2
   gather_facts: yes
   tags: ["ip_migration", "start_management"]
 
@@ -504,8 +534,13 @@
         cd /home/semptian/doris-manager/webserver/bin
         ./start.sh
       ignore_errors: yes
-      when: inventory_hostname == "doris-s2"
 
+- name: "阶段2: 启动Manager Agent和恢复自启动"
+  hosts: doris_cluster
+  gather_facts: yes
+  tags: ["ip_migration", "start_management"]
+
+  tasks:
     - name: 清理并启动Manager Agent
       shell: |
         cd /home/semptian/manager-agent/bin
@@ -634,7 +669,13 @@
 
           ========================================
 
-    - name: 显示BE节点FQDN设置SQL命令（如果是FQDN阶段）
+- name: "FQDN阶段: BE节点FQDN设置提示（仅在控制节点执行）"
+  hosts: localhost
+  gather_facts: no
+  tags: ["fqdn_setup"]
+
+  tasks:
+    - name: 显示BE节点FQDN设置SQL命令
       debug:
         msg: |
           ========================================
@@ -681,7 +722,6 @@
 
           注意：可以考虑每5条命令执行一次，避免一次性执行过多命令。
           ========================================
-      when: "'fqdn_setup' in ansible_run_tags"
 
     - name: 暂停执行 - 等待手动执行BE节点FQDN设置SQL命令
       pause:
@@ -704,4 +744,3 @@
 
           ========================================
           按 Enter 键继续，或按 Ctrl+C 然后 A 键中止执行
-      when: "'fqdn_setup' in ansible_run_tags"
