@@ -24,6 +24,33 @@
         - fe-service
       ignore_errors: yes
 
+    - name: 显示关闭分片均衡的提示信息
+      debug:
+        msg: |
+          ========================================
+          重要提示：在停止FE服务前，请先关闭分片均衡功能
+          ========================================
+
+          请在继续执行前，手动连接到Doris Master节点执行以下命令：
+          mysql -h 192.168.15.62 -P 9030 -u root -p123456
+
+          执行以下SQL命令关闭分片均衡：
+          admin set frontend config("disable_balance" = "true");
+          admin set frontend config("disable_colocate_balance" = "true");
+          admin set frontend config("disable_tablet_scheduler" = "true");
+
+          验证设置是否生效：
+          admin show frontend config like "%balance%";
+          admin show frontend config like "%scheduler%";
+
+          ========================================
+
+    - name: 暂停执行 - 等待手动关闭分片均衡
+      pause:
+        prompt: |
+          请确认已经执行上述SQL命令关闭分片均衡功能后，按 Enter 键继续
+          或按 Ctrl+C 然后 A 键中止执行
+
     - name: 停止Doris Manager Agent
       shell: |
         cd /home/semptian/manager-agent/bin
@@ -196,6 +223,29 @@
       fail:
         msg: "请提供 old_network 和 new_network 变量，例如: --extra-vars 'old_network=192.168.15 new_network=192.168.28'"
       when: old_network is not defined or new_network is not defined
+
+    - name: 显示关闭分片均衡的提示信息（IP迁移阶段）
+      debug:
+        msg: |
+          ========================================
+          重要提示：在停止服务前，请确认分片均衡功能已关闭
+          ========================================
+
+          如果在阶段1中未关闭分片均衡，请现在连接到Master节点执行：
+          mysql -h 192.168.15.62 -P 9030 -u root -p123456
+
+          执行以下SQL命令关闭分片均衡：
+          admin set frontend config("disable_balance" = "true");
+          admin set frontend config("disable_colocate_balance" = "true");
+          admin set frontend config("disable_tablet_scheduler" = "true");
+
+          ========================================
+
+    - name: 暂停执行 - 确认分片均衡已关闭
+      pause:
+        prompt: |
+          请确认分片均衡功能已关闭后，按 Enter 键继续
+          或按 Ctrl+C 然后 A 键中止执行
 
   tasks:
     - name: 显示IP迁移信息
@@ -461,6 +511,18 @@
         state: started
         timeout: 120
 
+    - name: 检查BE服务状态
+      uri:
+        url: "http://{{ ip_mapping[inventory_hostname] }}:8040/api/health"
+        method: GET
+        timeout: 10
+      register: be_health_check
+      ignore_errors: yes
+
+    - name: 显示BE健康检查结果
+      debug:
+        msg: "BE节点 {{ inventory_hostname }} ({{ ip_mapping[inventory_hostname] }}) 健康检查: {{ 'OK' if be_health_check.status == 200 else 'FAILED' }}"
+
 - name: "阶段2: 启动管理服务"
   hosts: doris_cluster
   gather_facts: yes
@@ -491,6 +553,55 @@
         - fe-service
       ignore_errors: yes
 
+- name: "阶段2: 等待集群稳定并开启分片均衡"
+  hosts: localhost
+  gather_facts: no
+  tags: ["ip_migration", "enable_balance"]
+  vars:
+    new_network: "{{ new_network | default('192.168.28') }}"
+
+  tasks:
+    - name: 等待集群稳定
+      pause:
+        seconds: 30
+        prompt: "等待Doris集群服务完全启动和稳定..."
+
+    - name: 显示开启分片均衡的提示信息
+      debug:
+        msg: |
+          ========================================
+          重要提示：现在需要开启分片均衡功能
+          ========================================
+
+          请连接到新的Doris Master节点执行以下步骤：
+          mysql -h {{ new_network }}.112 -P 9030 -u root -p123456
+
+          1. 首先检查集群状态：
+             show frontends;
+             show backends;
+             SHOW PROC '/backends';
+
+          2. 确认所有BE节点状态为Alive后，开启分片均衡：
+             admin set frontend config("disable_balance" = "false");
+             admin set frontend config("disable_colocate_balance" = "false");
+             admin set frontend config("disable_tablet_scheduler" = "false");
+
+          3. 验证设置是否生效：
+             admin show frontend config like "%balance%";
+             admin show frontend config like "%scheduler%";
+
+          4. 监控集群均衡状态：
+             SHOW PROC '/statistic';
+             SHOW PROC '/tasks';
+
+          ========================================
+
+    - name: 暂停执行 - 等待手动开启分片均衡
+      pause:
+        prompt: |
+          请确认已经执行上述步骤开启分片均衡功能后，按 Enter 键继续
+          或按 Ctrl+C 然后 A 键中止执行
+
 - name: "验证和手动操作提示"
   hosts: localhost
   gather_facts: no
@@ -517,17 +628,13 @@
              SHOW PROC '/backends';
              SHOW PROC '/statistic';
 
-          3. 关闭副本修复与均衡功能（如果需要）：
-             admin set frontend config("disable_balance" = "true");
-             admin set frontend config("disable_colocate_balance" = "true");
-             admin set frontend config("disable_tablet_scheduler" = "true");
+          3. 验证分片均衡功能状态：
+             admin show frontend config like "%balance%";
+             admin show frontend config like "%scheduler%";
 
-          4. 等待所有BE节点状态变为可用后，开启副本修复与均衡功能：
-             admin set frontend config("disable_balance" = "false");
-             admin set frontend config("disable_colocate_balance" = "false");
-             admin set frontend config("disable_tablet_scheduler" = "false");
+          注意：分片均衡功能应该在前面的步骤中已经开启
 
-          5. 执行读写测试：
+          4. 执行读写测试：
              CREATE DATABASE IF NOT EXISTS test_doris_rw;
              USE test_doris_rw;
              CREATE TABLE IF NOT EXISTS test_table (
@@ -548,12 +655,12 @@
 
              DROP DATABASE IF EXISTS test_doris_rw;
 
-          6. 访问管理界面：
+          5. 访问管理界面：
              Doris FE后台: http://{{ new_network }}.101:8030
              Doris Manager: http://{{ new_network }}.102:8004/1/monitor/dashboard
              BE后台页面: http://{{ new_network }}.101:8040
 
-          7. 如果需要更新其他依赖Doris的服务配置，请更新它们的hosts文件或配置文件中的IP地址。
+          6. 如果需要更新其他依赖Doris的服务配置，请更新它们的hosts文件或配置文件中的IP地址。
 
           ========================================
 
