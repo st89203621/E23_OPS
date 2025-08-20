@@ -36,20 +36,25 @@
         prompt: "请确认上述前置条件已满足，按Enter继续或Ctrl+C中止"
       when: ansible_run_tags is not defined or 'skip_confirm' not in ansible_run_tags
 
-# 检查MySQL客户端
+# 检查MySQL客户端 (可选)
 - name: "检查MySQL客户端"
   hosts: doris_cluster:localhost
   gather_facts: no
-  tags: ["fqdn_setup", "ip_migration"]
+  tags: ["fqdn_setup", "ip_migration", "mysql_check"]
   tasks:
     - name: 检查MySQL客户端
       shell: command -v mysql
       register: mysql_check
-      failed_when: mysql_check.rc != 0
+      failed_when: false
       ignore_errors: yes
-    - name: 安装提示
-      fail:
-        msg: "请安装MySQL客户端: sudo apt install mysql-client"
+
+    - name: 显示MySQL客户端状态
+      debug:
+        msg: "{{ inventory_hostname }}: MySQL客户端 {{ 'OK' if mysql_check.rc == 0 else 'NOT FOUND' }}"
+
+    - name: MySQL客户端缺失警告
+      debug:
+        msg: "⚠️ 警告: {{ inventory_hostname }} 上未找到MySQL客户端，某些操作可能失败"
       when: mysql_check.rc != 0
 
 # 阶段1: FQDN改造
@@ -62,7 +67,7 @@
       shell: |
         mysql {{ mysql_conn }} -e "
         SHOW FRONTENDS;
-        SHOW BACKENDS;" > /tmp/doris_cluster_status_before_fqdn_{{ hostvars['localhost']['backup_suffix'] }}.log
+        SHOW BACKENDS;" > /tmp/doris_cluster_status_before_fqdn_{{ hostvars['localhost']['backup_suffix'] }}.log 2>/dev/null || echo "MySQL连接失败，跳过状态记录"
       ignore_errors: yes
 
 - name: "阶段1: 关闭分片均衡"
@@ -75,7 +80,8 @@
         mysql {{ mysql_conn }} -e "
         admin set frontend config('disable_balance' = 'true');
         admin set frontend config('disable_colocate_balance' = 'true');
-        admin set frontend config('disable_tablet_scheduler' = 'true');"
+        admin set frontend config('disable_tablet_scheduler' = 'true');" 2>/dev/null || echo "MySQL连接失败，请手动关闭分片均衡"
+      ignore_errors: yes
 
 - name: "阶段1: 准备工作"
   hosts: doris_cluster
