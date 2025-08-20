@@ -138,10 +138,10 @@
           192.168.15.82 doris-s32
           192.168.15.83 doris-s33
 
-- name: "阶段1: FE节点FQDN改造"
-  hosts: doris_fe
+- name: "阶段1: Follower FE节点FQDN改造 - 停止和配置"
+  hosts: doris-s1,doris-s3,doris-s11,doris-s20
   gather_facts: yes
-  serial: 1  # 逐个执行，确保安全
+  serial: 1  # 逐个执行Follower节点
   tags: ["fqdn_setup"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
@@ -154,33 +154,17 @@
         cp -r ./doris-meta ./doris-meta-bak{{ backup_suffix }}
         cp ./conf/fe.conf ./conf/fe.conf-bak{{ backup_suffix }}
 
-    - name: 停止Follower FE节点 (先停止非Master节点)
+    - name: 停止FE节点 (按inventory顺序：Follower先停，Master最后停)
       shell: |
         cd {{ doris_home }}/fe/bin
         ./stop_fe.sh
-      when: inventory_hostname != "doris-s12"  # 先停止Follower节点
 
-    - name: 等待Follower FE服务停止
+    - name: 等待FE服务停止
       wait_for:
         port: 9030
         host: "{{ ansible_default_ipv4.address }}"
         state: stopped
         timeout: 60
-      when: inventory_hostname != "doris-s12"
-
-    - name: 停止Master FE节点 (最后停止)
-      shell: |
-        cd {{ doris_home }}/fe/bin
-        ./stop_fe.sh
-      when: inventory_hostname == "doris-s12"  # 最后停止Master节点
-
-    - name: 等待Master FE服务停止
-      wait_for:
-        port: 9030
-        host: "{{ ansible_default_ipv4.address }}"
-        state: stopped
-        timeout: 60
-      when: inventory_hostname == "doris-s12"
 
     - name: 修改FE配置启用FQDN模式
       lineinfile:
@@ -230,11 +214,83 @@
           ========================================
           按 Enter 键继续，或按 Ctrl+C 然后 A 键中止执行
 
-    - name: 启动Master FE节点 (先启动)
+- name: "阶段1: Master FE节点FQDN改造 - 停止和配置"
+  hosts: doris-s12
+  gather_facts: yes
+  tags: ["fqdn_setup"]
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+    backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+
+  tasks:
+    - name: 备份FE重要文件和数据
+      shell: |
+        cd {{ doris_home }}/fe
+        cp -r ./doris-meta ./doris-meta-bak{{ backup_suffix }}
+        cp ./conf/fe.conf ./conf/fe.conf-bak{{ backup_suffix }}
+
+    - name: 停止Master FE节点 (最后停止)
+      shell: |
+        cd {{ doris_home }}/fe/bin
+        ./stop_fe.sh
+
+    - name: 等待Master FE服务停止
+      wait_for:
+        port: 9030
+        host: "{{ ansible_default_ipv4.address }}"
+        state: stopped
+        timeout: 60
+
+    - name: 修改Master FE配置启用FQDN模式
+      lineinfile:
+        path: "{{ doris_home }}/fe/conf/fe.conf"
+        line: "enable_fqdn_mode = true"
+        create: yes
+        backup: yes
+
+    - name: 显示需要手动执行的Master FQDN设置SQL命令
+      debug:
+        msg: |
+          ========================================
+          当前节点: {{ inventory_hostname }} (Master节点)
+          ========================================
+          请在Doris MySQL客户端中手动执行以下命令来设置Master FQDN：
+          ALTER SYSTEM MODIFY FRONTEND "192.168.15.62:9010" HOSTNAME "doris-s12";
+
+    - name: 暂停执行 - 等待手动执行Master FQDN设置SQL命令
+      pause:
+        prompt: |
+
+          ========================================
+          请手动执行Master节点FQDN设置：
+          ========================================
+
+          1. 打开新的终端窗口
+          2. 连接到Doris Master节点：
+             mysql -h 192.168.15.62 -P 9030 -u root -p123456
+
+          3. 执行上面显示的SQL命令
+
+          4. 验证设置是否成功：
+             SHOW FRONTENDS;
+
+          5. 确认完成后，按 Enter 键继续
+
+          ========================================
+          按 Enter 键继续，或按 Ctrl+C 然后 A 键中止执行
+
+- name: "阶段1: 启动Master FE节点"
+  hosts: doris-s12
+  gather_facts: yes
+  tags: ["fqdn_setup"]
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+
+  tasks:
+    - name: 启动Master FE节点
       shell: |
         cd {{ doris_home }}/fe/bin
         ./start_fe.sh --daemon
-      when: inventory_hostname == "doris-s12"  # Master节点先启动
 
     - name: 等待Master FE服务启动
       wait_for:
@@ -242,13 +298,20 @@
         host: "{{ ansible_default_ipv4.address }}"
         state: started
         timeout: 120
-      when: inventory_hostname == "doris-s12"
 
+- name: "阶段1: 启动Follower FE节点"
+  hosts: doris-s1,doris-s3,doris-s11,doris-s20
+  gather_facts: yes
+  serial: 1
+  tags: ["fqdn_setup"]
+  vars:
+    doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
+
+  tasks:
     - name: 启动Follower FE节点 (使用helper模式)
       shell: |
         cd {{ doris_home }}/fe/bin
         ./start_fe.sh --helper doris-s12:9010 --daemon
-      when: inventory_hostname != "doris-s12"  # Follower节点使用helper模式
 
     - name: 等待Follower FE服务启动
       wait_for:
@@ -256,7 +319,6 @@
         host: "{{ ansible_default_ipv4.address }}"
         state: started
         timeout: 120
-      when: inventory_hostname != "doris-s12"
 
 
 
