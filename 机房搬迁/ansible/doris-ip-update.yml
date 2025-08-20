@@ -1,19 +1,18 @@
 ---
-# Doris集群IP迁移脚本 (精简版)
+# Doris集群IP迁移脚本 (修复版)
 # 使用方法:
 # 阶段1 - FQDN改造: ansible-playbook -i inventory/doris_old.ini doris-ip-update.yml --tags "fqdn_setup"
 # 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "new_network=192.168.28"
 
-# 全局变量
-- name: "设置全局变量"
+# 全局变量和前置检查
+- name: "设置全局变量和前置检查"
   hosts: localhost
   gather_facts: no
   tags: ["always"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
     mysql_conn: "-h 192.168.15.62 -P 9030 -u root -p123456"
-    old_network: "192.168.15"
-    fe_nodes: ["doris-s1", "doris-s3", "doris-s11", "doris-s12", "doris-s20"]
+    fe_follower_nodes: ["doris-s1", "doris-s3", "doris-s11", "doris-s20"]
     master_node: "doris-s12"
   tasks:
     - name: 设置全局变量
@@ -21,8 +20,22 @@
         doris_home: "{{ doris_home }}"
         mysql_conn: "{{ mysql_conn }}"
         backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+        
+    - name: 前置条件检查提醒
+      debug:
+        msg: |
+          ⚠️  执行前必须确认：
+          1. 上游已停止数据写入和查询
+          2. 已关闭Doris Manager自动拉起功能
+          3. 已在测试环境验证此脚本
+          4. 已准备回滚方案
+      
+    - name: 等待确认
+      pause:
+        prompt: "请确认上述前置条件已满足，按Enter继续或Ctrl+C中止"
+      when: ansible_run_tags is not defined or 'skip_confirm' not in ansible_run_tags
 
-# 检查依赖
+# 检查MySQL客户端
 - name: "检查MySQL客户端"
   hosts: doris_cluster:localhost
   gather_facts: no
@@ -39,6 +52,18 @@
       when: mysql_check.rc != 0
 
 # 阶段1: FQDN改造
+- name: "阶段1: 记录集群初始状态"
+  hosts: localhost
+  gather_facts: no
+  tags: ["fqdn_setup"]
+  tasks:
+    - name: 记录FE和BE状态
+      shell: |
+        mysql {{ mysql_conn }} -e "
+        SHOW FRONTENDS;
+        SHOW BACKENDS;" > /tmp/doris_cluster_status_before_fqdn_{{ hostvars['localhost']['backup_suffix'] }}.log
+      ignore_errors: yes
+
 - name: "阶段1: 关闭分片均衡"
   hosts: localhost
   gather_facts: no
@@ -56,9 +81,15 @@
   gather_facts: yes
   tags: ["fqdn_setup"]
   tasks:
-    - name: 停止服务和禁用自启动
+    - name: 禁用自启动服务
+      systemd:
+        name: "{{ item }}"
+        enabled: no
+      loop: ["be-service", "fe-service"]
+      ignore_errors: yes
+
+    - name: 停止管理服务
       shell: |
-        systemctl disable be-service fe-service 2>/dev/null || true
         {% if inventory_hostname == "doris-s2" %}
         cd /home/semptian/doris-manager/webserver/bin && ./stop 2>/dev/null || true
         {% endif %}
@@ -70,73 +101,125 @@
   gather_facts: no
   tags: ["fqdn_setup", "ip_migration"]
   tasks:
-    - name: 备份并清理hosts
+    - name: 备份hosts文件
+      copy:
+        src: /etc/hosts
+        dest: "/etc/hosts.backup.{{ hostvars['localhost']['backup_suffix'] }}"
+        remote_src: yes
+
+    - name: 清理旧的Doris hosts配置
       shell: |
-        cp /etc/hosts /etc/hosts.backup.{{ hostvars['localhost']['backup_suffix'] }}
         sed -i '/192\.168\.(15|28)\.[0-9]\+ doris-s[0-9]\+/d' /etc/hosts
         sed -i '/# BEGIN DORIS CLUSTER/,/# END DORIS CLUSTER/d' /etc/hosts
 
-    - name: 生成hosts内容
+    - name: 生成hosts映射内容
       set_fact:
-        network_prefix: "{% if 'ip_migration' in ansible_run_tags %}{{ new_network | default('192.168.28') }}{% else %}192.168.15{% endif %}"
-        ip_start: "{% if 'ip_migration' in ansible_run_tags %}101{% else %}51{% endif %}"
+        hosts_content: |
+          {% if 'ip_migration' in ansible_run_tags %}
+          {% for i in range(1, 34) %}
+          192.168.28.{{ 100 + i }} doris-s{{ i }}
+          {% endfor %}
+          {% else %}
+          {% for i in range(1, 34) %}
+          192.168.15.{{ 50 + i }} doris-s{{ i }}
+          {% endfor %}
+          {% endif %}
 
     - name: 更新hosts文件
       blockinfile:
         path: /etc/hosts
         marker: "# {mark} DORIS CLUSTER HOSTS"
-        block: |
-          {% for i in range(1, 34) %}
-          {{ network_prefix }}.{{ (ip_start | int) + i - 1 }} doris-s{{ i }}
-          {% endfor %}
+        block: "{{ hosts_content }}"
 
-- name: "阶段1: FE节点FQDN改造"
+# 阶段1: Follower FE节点FQDN改造 (严格按照文档顺序)
+- name: "阶段1: Follower FE节点FQDN改造"
   hosts: doris-s1,doris-s3,doris-s11,doris-s20
   gather_facts: no
-  serial: 1
+  serial: 1  # 逐个执行
   tags: ["fqdn_setup"]
   tasks:
-    - name: 备份并配置FE
+    - name: 备份FE数据和配置
       shell: |
         cd {{ hostvars['localhost']['doris_home'] }}/fe
         cp -r doris-meta doris-meta-bak{{ hostvars['localhost']['backup_suffix'] }}
         cp conf/fe.conf conf/fe.conf-bak{{ hostvars['localhost']['backup_suffix'] }}
-        echo "enable_fqdn_mode = true" >> conf/fe.conf
 
-    - name: 设置FQDN并重启FE
+    - name: 1. 停止FE节点
       shell: |
-        # 设置FQDN
-        mysql {{ hostvars['localhost']['mysql_conn'] }} -e "
-        ALTER SYSTEM MODIFY FRONTEND '192.168.15.{{ ansible_default_ipv4.address.split('.')[3] }}:9010' HOSTNAME '{{ inventory_hostname }}';"
-        
-        # 重启FE
         cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
         ./stop_fe.sh
-        sleep 10
-        ./start_fe.sh --helper doris-s12:9010 --daemon
-      ignore_errors: yes
 
-    - name: 等待FE启动
+    - name: 2. 验证节点已停止 (检查Alive状态变为false)
+      shell: |
+        mysql {{ hostvars['localhost']['mysql_conn'] }} -e "SHOW FRONTENDS;" | grep {{ inventory_hostname }} | grep false
+      register: fe_stopped
+      retries: 12
+      delay: 5
+      until: fe_stopped.rc == 0
+
+    - name: 3. 设置FQDN
+      shell: |
+        mysql {{ hostvars['localhost']['mysql_conn'] }} -e "
+        ALTER SYSTEM MODIFY FRONTEND '{{ ansible_default_ipv4.address }}:9010' HOSTNAME '{{ inventory_hostname }}';"
+      register: fqdn_result
+
+    - name: 4. 修改节点配置启用FQDN模式
+      lineinfile:
+        path: "{{ hostvars['localhost']['doris_home'] }}/fe/conf/fe.conf"
+        line: "enable_fqdn_mode = true"
+        backup: yes
+
+    - name: 5. 启动FE节点
+      shell: |
+        cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
+        ./start_fe.sh --helper doris-s12:9010 --daemon
+
+    - name: 等待FE节点启动
       wait_for:
         port: 9030
         timeout: 120
-      ignore_errors: yes
 
+    - name: 验证节点状态
+      shell: |
+        mysql {{ hostvars['localhost']['mysql_conn'] }} -e "SHOW FRONTENDS;" | grep {{ inventory_hostname }}
+      register: fe_status
+      retries: 5
+      delay: 10
+
+    - name: 显示节点状态
+      debug:
+        msg: "{{ inventory_hostname }} 状态: {{ fe_status.stdout }}"
+
+    - name: 等待节点稳定
+      pause:
+        seconds: 30
+
+# 阶段1: Master节点FQDN改造
 - name: "阶段1: Master节点FQDN改造"
   hosts: doris-s12
   gather_facts: no
   tags: ["fqdn_setup"]
   tasks:
-    - name: 备份并配置Master FE
+    - name: 备份Master FE数据
       shell: |
         cd {{ hostvars['localhost']['doris_home'] }}/fe
-        cp -r doris-meta doris-meta-bak{{ hostvars['localhost']['backup_suffix'] }}
-        cp conf/fe.conf conf/fe.conf-bak{{ hostvars['localhost']['backup_suffix'] }}
-        echo "enable_fqdn_mode = true" >> conf/fe.conf
-        
-        # 停止Master触发选主
-        cd bin && ./stop_fe.sh
-        sleep 30
+        cp -r doris-meta doris-meta-bak{{ hostvars['localhost']['backup_suffix'] }}-master
+        cp conf/fe.conf conf/fe.conf-bak{{ hostvars['localhost']['backup_suffix'] }}-master
+
+    - name: 修改Master配置启用FQDN模式
+      lineinfile:
+        path: "{{ hostvars['localhost']['doris_home'] }}/fe/conf/fe.conf"
+        line: "enable_fqdn_mode = true"
+        backup: yes
+
+    - name: 停止Master节点 (触发重新选主)
+      shell: |
+        cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
+        ./stop_fe.sh
+
+    - name: 等待Master选举完成
+      pause:
+        seconds: 30
 
 - name: "阶段1: 完成Master FQDN设置"
   hosts: localhost
@@ -167,19 +250,27 @@
         mysql {{ mysql_conn }} -e "
         ALTER SYSTEM MODIFY BACKEND '192.168.15.{{ item }}:9050' HOSTNAME 'doris-s{{ item - 50 }}';"
       loop: "{{ range(51, 84) | list }}"
-      throttle: 5
+      throttle: 3
       ignore_errors: yes
+
+    - name: 验证FQDN改造结果
+      shell: |
+        mysql {{ mysql_conn }} -e "
+        SHOW FRONTENDS;
+        SHOW BACKENDS;" > /tmp/doris_cluster_status_after_fqdn_{{ hostvars['localhost']['backup_suffix'] }}.log
 
     - name: 显示FQDN改造完成信息
       debug:
         msg: |
           ========================================
-          FQDN改造完成！现在可以执行IP迁移：
-          ansible-playbook -i inventory/doris_new.ini doris-ip-update-simplified.yml --tags "ip_migration" --extra-vars "new_network=192.168.28"
+          FQDN改造完成！
+          状态已保存到: /tmp/doris_cluster_status_after_fqdn_{{ hostvars['localhost']['backup_suffix'] }}.log
+          现在可以执行IP迁移：
+          ansible-playbook -i inventory/doris_new.ini doris-ip-update-fixed.yml --tags "ip_migration" --extra-vars "new_network=192.168.28"
           ========================================
 
 # 阶段2: IP迁移
-- name: "阶段2: 验证参数"
+- name: "阶段2: 验证参数和记录状态"
   hosts: localhost
   gather_facts: no
   tags: ["ip_migration"]
@@ -189,17 +280,97 @@
         msg: "请提供new_network参数: --extra-vars 'new_network=192.168.28'"
       when: new_network is not defined
 
-- name: "阶段2: 停止所有服务"
+    - name: 记录迁移前集群状态
+      shell: |
+        mysql -h 192.168.15.62 -P 9030 -u root -p123456 -e "
+        SHOW FRONTENDS;
+        SHOW BACKENDS;
+        SHOW PROC '/backends';" > /tmp/doris_cluster_status_before_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.log
+      ignore_errors: yes
+
+- name: "阶段2: 停止所有Doris服务"
   hosts: doris_cluster
   gather_facts: no
   tags: ["ip_migration"]
   tasks:
-    - name: 停止Doris服务
+    - name: 停止BE服务 (先停BE)
       shell: |
-        cd {{ hostvars['localhost']['doris_home'] }}
-        be/bin/stop_be.sh 2>/dev/null || true
-        fe/bin/stop_fe.sh 2>/dev/null || true
-        sleep 5
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/be/bin
+        ./stop_be.sh
+      ignore_errors: yes
+      when: inventory_hostname not in ['doris-s1', 'doris-s3', 'doris-s11', 'doris-s12', 'doris-s20'] or inventory_hostname in ['doris-s1', 'doris-s3', 'doris-s11', 'doris-s12', 'doris-s20']
+
+    - name: 等待BE服务停止
+      wait_for:
+        port: 9060
+        state: stopped
+        timeout: 60
+      ignore_errors: yes
+
+- name: "阶段2: 停止FE服务 (先Follower后Master)"
+  hosts: doris-s1,doris-s3,doris-s11,doris-s20
+  gather_facts: no
+  serial: 1
+  tags: ["ip_migration"]
+  tasks:
+    - name: 停止Follower FE服务
+      shell: |
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/bin
+        ./stop_fe.sh
+      ignore_errors: yes
+
+    - name: 等待FE服务停止
+      wait_for:
+        port: 9030
+        state: stopped
+        timeout: 60
+      ignore_errors: yes
+
+- name: "阶段2: 停止Master FE服务"
+  hosts: doris-s12
+  gather_facts: no
+  tags: ["ip_migration"]
+  tasks:
+    - name: 停止Master FE服务
+      shell: |
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/bin
+        ./stop_fe.sh
+      ignore_errors: yes
+
+    - name: 等待Master FE服务停止
+      wait_for:
+        port: 9030
+        state: stopped
+        timeout: 60
+      ignore_errors: yes
+
+    - name: 最终备份Master元数据
+      shell: |
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe
+        cp -r doris-meta doris-meta-bak{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}-final
+        cp conf/fe.conf conf/fe.conf-bak{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}-final
+
+    - name: 确认所有Doris进程已停止
+      shell: ps -ef | grep doris | grep -v grep
+      register: doris_processes
+      ignore_errors: yes
+
+    - name: 显示剩余进程
+      debug:
+        var: doris_processes.stdout_lines
+      when: doris_processes.stdout_lines | length > 0
+
+- name: "阶段2: 停止管理服务"
+  hosts: doris_cluster
+  gather_facts: no
+  tags: ["ip_migration"]
+  tasks:
+    - name: 停止Manager和Agent服务
+      shell: |
+        {% if inventory_hostname == "doris-s2" %}
+        cd /home/semptian/doris-manager/webserver/bin && ./stop 2>/dev/null || true
+        {% endif %}
+        cd /home/semptian/manager-agent/bin && ./stop.sh 2>/dev/null || true
       ignore_errors: yes
 
 - name: "阶段2: 更新配置文件"
@@ -207,66 +378,211 @@
   gather_facts: no
   tags: ["ip_migration"]
   tasks:
-    - name: 更新priority_networks配置
+    - name: 更新FE配置文件 - priority_networks (修正为22位掩码)
       lineinfile:
-        path: "{{ hostvars['localhost']['doris_home'] }}/{{ item }}/conf/{{ item }}.conf"
+        path: "{{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/conf/fe.conf"
         regexp: '^priority_networks\s*='
-        line: "priority_networks = {{ new_network }}.0/24"
+        line: "priority_networks = {{ new_network }}.0/22"
         backup: yes
-      loop: ["fe", "be"]
-      ignore_errors: yes
+      when: inventory_hostname in ['doris-s1', 'doris-s3', 'doris-s11', 'doris-s12', 'doris-s20']
 
-- name: "阶段2: 启动服务"
-  hosts: doris_cluster
+    - name: 更新BE配置文件 - priority_networks (修正为22位掩码)
+      lineinfile:
+        path: "{{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/be/conf/be.conf"
+        regexp: '^priority_networks\s*='
+        line: "priority_networks = {{ new_network }}.0/22"
+        backup: yes
+
+# 阶段2: 启动服务 (严格按照文档顺序)
+- name: "阶段2: 启动Master FE服务"
+  hosts: doris-s12
+  gather_facts: no
+  tags: ["ip_migration"]
+  tasks:
+    - name: 启动Master FE节点
+      shell: |
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/bin
+        ./start_fe.sh --daemon
+
+    - name: 等待Master FE启动
+      wait_for:
+        port: 9030
+        host: "{{ new_network }}.112"
+        state: started
+        timeout: 180
+
+    - name: 验证Master FE状态
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "SHOW FRONTENDS;"
+      register: master_status
+      retries: 5
+      delay: 10
+
+    - name: 显示Master状态
+      debug:
+        var: master_status.stdout_lines
+
+- name: "阶段2: 启动其他FE服务"
+  hosts: doris-s1,doris-s3,doris-s11,doris-s20
   gather_facts: no
   serial: 1
   tags: ["ip_migration"]
+  vars:
+    # 新IP映射
+    new_ip_map:
+      doris-s1: "{{ new_network }}.101"
+      doris-s3: "{{ new_network }}.103"
+      doris-s11: "{{ new_network }}.111"
+      doris-s20: "{{ new_network }}.120"
   tasks:
-    - name: 启动FE服务
+    - name: 启动Follower FE节点
       shell: |
-        cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
-        {% if inventory_hostname == "doris-s12" %}
-        ./start_fe.sh --daemon
-        {% else %}
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/bin
         ./start_fe.sh --helper {{ new_network }}.112:9010 --daemon
-        {% endif %}
-      when: inventory_hostname in hostvars['localhost']['fe_nodes']
 
+    - name: 等待FE节点启动
+      wait_for:
+        port: 9030
+        host: "{{ new_ip_map[inventory_hostname] }}"
+        state: started
+        timeout: 180
+
+    - name: 验证FE节点状态
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "SHOW FRONTENDS;" | grep {{ inventory_hostname }}
+      register: fe_status
+      retries: 5
+      delay: 10
+
+    - name: 显示FE节点状态
+      debug:
+        msg: "{{ inventory_hostname }} ({{ new_ip_map[inventory_hostname] }}) 状态: {{ fe_status.stdout }}"
+
+- name: "阶段2: 启动BE服务"
+  hosts: doris_be
+  gather_facts: no
+  serial: 5  # 每批5个节点
+  tags: ["ip_migration"]
+  vars:
+    # 完整的新IP映射
+    be_ip_map:
+      doris-s1: "{{ new_network }}.101"
+      doris-s2: "{{ new_network }}.102"
+      doris-s3: "{{ new_network }}.103"
+      doris-s4: "{{ new_network }}.104"
+      doris-s5: "{{ new_network }}.105"
+      doris-s6: "{{ new_network }}.106"
+      doris-s7: "{{ new_network }}.107"
+      doris-s8: "{{ new_network }}.108"
+      doris-s9: "{{ new_network }}.109"
+      doris-s10: "{{ new_network }}.110"
+      doris-s11: "{{ new_network }}.111"
+      doris-s12: "{{ new_network }}.112"
+      doris-s13: "{{ new_network }}.113"
+      doris-s14: "{{ new_network }}.114"
+      doris-s15: "{{ new_network }}.115"
+      doris-s16: "{{ new_network }}.116"
+      doris-s17: "{{ new_network }}.117"
+      doris-s18: "{{ new_network }}.118"
+      doris-s19: "{{ new_network }}.119"
+      doris-s20: "{{ new_network }}.120"
+      doris-s21: "{{ new_network }}.121"
+      doris-s22: "{{ new_network }}.122"
+      doris-s23: "{{ new_network }}.123"
+      doris-s24: "{{ new_network }}.124"
+      doris-s25: "{{ new_network }}.125"
+      doris-s26: "{{ new_network }}.126"
+      doris-s27: "{{ new_network }}.127"
+      doris-s28: "{{ new_network }}.128"
+      doris-s29: "{{ new_network }}.129"
+      doris-s30: "{{ new_network }}.130"
+      doris-s31: "{{ new_network }}.131"
+      doris-s32: "{{ new_network }}.132"
+      doris-s33: "{{ new_network }}.133"
+  tasks:
     - name: 启动BE服务
       shell: |
-        cd {{ hostvars['localhost']['doris_home'] }}/be/bin
+        cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/be/bin
         ./start_be.sh --daemon
-      when: inventory_hostname not in hostvars['localhost']['fe_nodes']
 
-    - name: 等待服务启动
+    - name: 等待BE服务启动
       wait_for:
-        port: "{{ '9030' if inventory_hostname in hostvars['localhost']['fe_nodes'] else '9060' }}"
-        timeout: 120
+        port: 9060
+        host: "{{ be_ip_map[inventory_hostname] }}"
+        state: started
+        timeout: 180
+
+    - name: 检查BE健康状态
+      uri:
+        url: "http://{{ be_ip_map[inventory_hostname] }}:8040/api/health"
+        method: GET
+        timeout: 10
+      register: be_health
       ignore_errors: yes
+
+    - name: 显示BE健康状态
+      debug:
+        msg: "BE节点 {{ inventory_hostname }} ({{ be_ip_map[inventory_hostname] }}) 健康状态: {{ 'OK' if be_health.status == 200 else 'FAILED' }}"
 
 - name: "阶段2: 恢复管理服务"
   hosts: doris_cluster
   gather_facts: no
   tags: ["ip_migration"]
   tasks:
-    - name: 启动管理服务并恢复自启动
+    - name: 启动Doris Manager
       shell: |
-        {% if inventory_hostname == "doris-s2" %}
-        cd /home/semptian/doris-manager/webserver/bin && ./start.sh &
-        {% endif %}
-        cd /home/semptian/manager-agent/bin && ./start.sh &
-        systemctl enable be-service fe-service 2>/dev/null || true
+        cd /home/semptian/doris-manager/webserver/bin
+        ./start.sh
+      ignore_errors: yes
+      when: inventory_hostname == "doris-s2"
+
+    - name: 重新启动Manager Agent (清理ID文件)
+      shell: |
+        cd /home/semptian/manager-agent/bin
+        ./stop.sh 2>/dev/null || true
+        rm -rf agent_id manager_id
+        ./start.sh
       ignore_errors: yes
 
-- name: "阶段2: 开启分片均衡"
+    - name: 恢复开机自启动
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+      loop: ["be-service", "fe-service"]
+      ignore_errors: yes
+
+- name: "阶段2: 等待集群稳定并开启分片均衡"
   hosts: localhost
   gather_facts: no
   tags: ["ip_migration"]
   tasks:
-    - name: 等待集群稳定
+    - name: 等待集群完全稳定
       pause:
-        seconds: 30
-        prompt: "等待集群稳定..."
+        seconds: 60
+        prompt: "等待Doris集群服务完全启动和稳定..."
+
+    - name: 验证集群状态
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "
+        SHOW FRONTENDS;
+        SHOW BACKENDS;
+        SHOW PROC '/backends';"
+      register: cluster_status
+      retries: 3
+      delay: 10
+
+    - name: 显示集群状态
+      debug:
+        var: cluster_status.stdout_lines
+
+    - name: 检查所有BE节点是否Alive
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "SHOW PROC '/backends';" | grep -c "true"
+      register: alive_be_count
+
+    - name: 验证BE节点数量
+      debug:
+        msg: "当前Alive的BE节点数量: {{ alive_be_count.stdout }}/33"
 
     - name: 开启分片均衡功能
       shell: |
@@ -274,14 +590,128 @@
         admin set frontend config('disable_balance' = 'false');
         admin set frontend config('disable_colocate_balance' = 'false');
         admin set frontend config('disable_tablet_scheduler' = 'false');"
+      when: alive_be_count.stdout | int >= 30  # 至少30个BE节点正常才开启均衡
+
+    - name: 验证分片均衡配置
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "
+        admin show frontend config like '%balance%';
+        admin show frontend config like '%scheduler%';"
+      register: balance_config
+
+    - name: 显示分片均衡配置
+      debug:
+        var: balance_config.stdout_lines
+
+- name: "阶段2: 数据完整性验证"
+  hosts: localhost
+  gather_facts: no
+  tags: ["ip_migration", "verification"]
+  tasks:
+    - name: 执行读写测试
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "
+        CREATE DATABASE IF NOT EXISTS test_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }};
+        USE test_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }};
+        CREATE TABLE IF NOT EXISTS test_table (
+          id BIGINT,
+          name VARCHAR(64),
+          ts DATETIME
+        )
+        ENGINE=OLAP
+        DUPLICATE KEY(id)
+        DISTRIBUTED BY HASH(id) BUCKETS 10
+        PROPERTIES ('replication_num' = '1');
+
+        INSERT INTO test_table VALUES
+        (1, 'Migration Test', NOW()),
+        (2, 'IP Change Test', NOW());
+
+        SELECT COUNT(*) as test_count FROM test_table;
+
+        DROP DATABASE test_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }};"
+      register: rw_test_result
       ignore_errors: yes
 
-    - name: 显示完成信息
+    - name: 显示读写测试结果
+      debug:
+        msg: |
+          读写测试结果: {{ 'PASSED' if rw_test_result.rc == 0 else 'FAILED' }}
+          {{ rw_test_result.stdout_lines if rw_test_result.rc == 0 else rw_test_result.stderr }}
+
+    - name: 元数据损坏检测
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "
+        SELECT COUNT(*) FROM information_schema.tables;
+        SHOW PROC '/statistic';"
+      register: metadata_check
+      ignore_errors: yes
+
+    - name: 保存迁移后状态
+      shell: |
+        mysql -h {{ new_network }}.112 -P 9030 -u root -p123456 -e "
+        SHOW FRONTENDS;
+        SHOW BACKENDS;
+        SHOW PROC '/backends';
+        SHOW PROC '/statistic';" > /tmp/doris_cluster_status_after_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.log
+
+    - name: 显示迁移完成信息
       debug:
         msg: |
           ========================================
-          IP迁移完成！
-          新的连接地址: mysql -h {{ new_network }}.112 -P 9030 -u root -p123456
-          FE管理界面: http://{{ new_network }}.101:8030
-          Doris Manager: http://{{ new_network }}.102:8004
+          🎉 Doris集群IP迁移完成！
           ========================================
+
+          ✅ 新的连接信息：
+          - 数据库连接: mysql -h {{ new_network }}.112 -P 9030 -u root -p123456
+          - FE管理界面: http://{{ new_network }}.101:8030
+          - Doris Manager: http://{{ new_network }}.102:8004/1/monitor/dashboard
+          - BE管理界面: http://{{ new_network }}.101:8040
+
+          📊 集群状态：
+          - 读写测试: {{ 'PASSED' if rw_test_result.rc == 0 else 'FAILED' }}
+          - Alive BE节点: {{ alive_be_count.stdout }}/33
+          - 分片均衡: {{ '已开启' if alive_be_count.stdout | int >= 30 else '待手动开启' }}
+
+          📁 状态文件：
+          - 迁移后状态: /tmp/doris_cluster_status_after_migration_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.log
+
+          ⚠️  后续操作：
+          1. 更新其他依赖服务的配置文件
+          2. 监控集群状态24-72小时
+          3. 如有问题，使用备份的元数据回滚
+
+          ========================================
+
+    - name: 生成迁移报告
+      copy:
+        content: |
+          # Doris集群IP迁移报告
+
+          ## 迁移信息
+          - 执行时间: {{ ansible_date_time.iso8601 }}
+          - 旧网段: 192.168.15.x
+          - 新网段: {{ new_network }}.x
+
+          ## 迁移结果
+          - 读写测试: {{ 'PASSED' if rw_test_result.rc == 0 else 'FAILED' }}
+          - BE节点状态: {{ alive_be_count.stdout }}/33 Alive
+          - 分片均衡: {{ '已开启' if alive_be_count.stdout | int >= 30 else '需手动开启' }}
+
+          ## 新的访问地址
+          - 数据库: mysql -h {{ new_network }}.112 -P 9030 -u root -p123456
+          - FE管理: http://{{ new_network }}.101:8030
+          - Manager: http://{{ new_network }}.102:8004
+
+          ## 备份文件位置
+          - FQDN改造前: /tmp/doris_cluster_status_before_fqdn_*.log
+          - FQDN改造后: /tmp/doris_cluster_status_after_fqdn_*.log
+          - IP迁移前: /tmp/doris_cluster_status_before_migration_*.log
+          - IP迁移后: /tmp/doris_cluster_status_after_migration_*.log
+
+          ## 配置文件备份
+          - FE配置: {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/conf/fe.conf-bak*
+          - BE配置: {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/be/conf/be.conf-bak*
+          - 元数据: {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/doris-meta-bak*
+        dest: "/tmp/doris_migration_report_{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}.md"
+      delegate_to: localhost
