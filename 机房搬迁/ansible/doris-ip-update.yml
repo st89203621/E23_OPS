@@ -325,7 +325,7 @@
 - name: "阶段2: IP迁移 - 停止服务和备份"
   hosts: doris_cluster
   gather_facts: yes
-  tags: ["ip_migration", "stop_services"]
+  tags: ["ip_migration"]
   vars:
     doris_home: "/home/semptian/apache-doris-2.1.6-bin-x64"
     backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
