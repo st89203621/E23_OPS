@@ -95,7 +95,7 @@
   tasks:
     - name: 检查并强制停止自启动服务
       shell: |
-        for service in be-service fe-service; do
+        for service in doris-be.service doris-fe.service; do
           if systemctl list-unit-files | grep -q "^$service"; then
             echo "停止并禁用服务: $service"
             systemctl stop $service 2>/dev/null || true
@@ -206,8 +206,8 @@
         pkill -f "fe.conf" || true
 
         # 再次确认停止systemd服务（如果存在）
-        systemctl stop fe-service 2>/dev/null || true
-        systemctl mask fe-service 2>/dev/null || true
+        systemctl stop doris-fe.service 2>/dev/null || true
+        systemctl mask doris-fe.service 2>/dev/null || true
 
         echo "FE节点停止完成"
 
@@ -632,9 +632,10 @@
 
     - name: 检查并恢复开机自启动
       shell: |
-        for service in be-service fe-service; do
+        for service in doris-be.service doris-fe.service; do
           if systemctl list-unit-files | grep -q "^$service"; then
             echo "启用服务: $service"
+            systemctl unmask $service 2>/dev/null || true
             systemctl enable $service
           else
             echo "服务不存在，跳过: $service"
