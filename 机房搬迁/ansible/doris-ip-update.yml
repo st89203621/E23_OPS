@@ -3,7 +3,7 @@
 #
 # 使用方法:
 # 阶段1 - FQDN改造: ansible-playbook -i inventory/doris_old.ini doris-ip-update.yml --tags "fqdn_setup"
-# 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "old_network=192.168.15 new_network=192.168.28"
+# 阶段2 - IP迁移: ansible-playbook -i inventory/doris_new.ini doris-ip-update.yml --tags "ip_migration" --extra-vars "new_network=192.168.28"
 #
 
 - name: "阶段1: 显示关闭分片均衡提示（仅在控制节点执行）"
@@ -333,13 +333,10 @@
   pre_tasks:
     - name: 验证必需的变量
       fail:
-        msg: "请提供 old_network 和 new_network 变量，例如: --extra-vars 'old_network=192.168.15 new_network=192.168.28'"
-      when: old_network is not defined or new_network is not defined
+        msg: "请提供 new_network 变量，例如: --extra-vars 'new_network=192.168.28'"
+      when: new_network is not defined
 
   tasks:
-    - name: 显示IP迁移信息
-      debug:
-        msg: "正在将Doris集群从 {{ old_network }}.x 迁移到 {{ new_network }}.x"
 
 - name: "阶段2: 停止BE节点"
   hosts: doris_be
