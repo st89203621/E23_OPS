@@ -1,0 +1,419 @@
+Doris集群IP信息变更方案
+1.修订记录
+日期	内容	作者
+2025.08.08	完成初稿	曹洋
+2025.08.18	结合实验情况实施，并优化方案文档	黄文俊
+2025.08.19	基于现场环境，修改文档	黄文俊
+2025.08.20	补充（7.8）元数据损坏的检测脚本	黄文俊
+
+2.变更概述
+变更目的：统一更新Doris集群所有节点的IP地址信息，保证历史数据不丢失，并且集群启动后一小时内恢复正常读写操作
+影响范围：全部5个FE节点和33个BE节点
+预期耗时：三小时
+风险等级：中
+3.方案概述
+总体变更方案主要分如下几步：
+a.备份重要文件和数据，及其他一些前置准备工作
+b.将doris集群改造成FQDN模式，让集群间通信寻址不再直接依赖机器IP，而是通过配置的域名来寻址
+c.待第一步改造完成并观察集群读写正常后，停止所有doris服务，再次备份重要文件和数据
+d.服务器下电搬迁到新机房，上电后配置新IP，保证新IP之间互通
+e.修改服务器/etc/hosts文件，将ip调整为新ip
+f.依次按顺序启动doris的fe、be节点
+备注：FQDN的理论依据参考doris官方文档FQDN - Apache Doris
+
+
+
+4.基础环境(测试环境)
+机器IP	角色	安装部署根路径
+192.168.15.51,192.168.15.53,192.168.15.61,192.168.15.62,192.168.15.70	Doris-FE	/home/semptian/apache-doris-2.1.6-bin-x64/fe
+192.168.15.62	Doris-FE(Master)	/home/semptian/apache-doris-2.1.6-bin-x64/fe
+192.168.15.51-83	Doris-BE	/home/semptian/apache-doris-2.1.6-bin-x64/be
+192.168.15.52	Doris-Manager	/home/semptian/doris-manager
+所有Doris 节点	Doris-Agent	/home/semptian/manager-agent/bin
+
+
+5.准备工作
+5.1.关闭自动拉起
+打开  http://192.168.15.52:8004/1/monitor/dashboard
+
+Doris Manager 关闭自动拉起
+
+
+禁止开机自启
+
+systemctl disable be-service
+systemctl disable fe-service
+
+5.2.Doris Host 文件修改
+注意：在Doris 的节点中/etc/hosts文件中不能有重复的 IP 地址。且该IP 为机房搬前的ip
+
+192.168.15.51 doris-s1
+192.168.15.52 doris-s2
+192.168.15.53 doris-s3
+192.168.15.54 doris-s4
+192.168.15.55 doris-s5
+192.168.15.56 doris-s6
+192.168.15.57 doris-s7
+192.168.15.58 doris-s8
+192.168.15.59 doris-s9
+192.168.15.60 doris-s10
+192.168.15.61 doris-s11
+192.168.15.62 doris-s12
+192.168.15.63 doris-s13
+192.168.15.64 doris-s14
+192.168.15.65 doris-s15
+192.168.15.66 doris-s16
+192.168.15.67 doris-s17
+192.168.15.68 doris-s18
+192.168.15.69 doris-s19
+192.168.15.70 doris-s20
+192.168.15.71 doris-s21
+192.168.15.72 doris-s22
+192.168.15.73 doris-s23
+192.168.15.74 doris-s24
+192.168.15.75 doris-s25
+192.168.15.76 doris-s26
+192.168.15.77 doris-s27
+192.168.15.78 doris-s28
+192.168.15.79 doris-s29
+192.168.15.80 doris-s30
+192.168.15.81 doris-s31
+192.168.15.82 doris-s32
+192.168.15.83 doris-s33
+
+6.FQDN 集群改造 (阶段1)
+注：该阶段的实施前提是 上游停止数据写入和查询，否则可能造成元数据版本不一致问题
+6.1.备份重要文件和数据
+(1)进入doris主目录，备份重要文件和数据（需要备份各个 fe 节点源数据，最后备份 master）
+cp -r ./doris-meta ./doris-meta-bak0807
+cp ./conf/fe.conf ./conf/fe.conf-bak0807
+(2)记录fe相关信息和be节点id信息，方便变更完成后对比
+show frontends;
+show backends;
+
+
+
+
+6.2.将doris集群改造成FQDN模式（FE）（该步骤需要严格按照以下操作实施，否则可能无法启动FE）
+
+逐一对 Follower节点进行以下操作 (最后操作 Master 节点)：
+
+1停止节点。
+./stop_fe.sh
+
+2 检查节点是否停止。
+通过 MySQL 客户端执行show frontends，查看该 FE 节点的 Alive 状态直至变为 false
+
+3 为节点设置 FQDN: ALTER SYSTEM MODIFY FRONTEND "<fe_ip>:<edit_log_port>" HOSTNAME "<fe_hostname>"（停掉 master 后，会选举出新的 master 节点，用新的 master 节点来执行 sql 语句）（全量脚本在下面）
+（示例：）
+ALTER SYSTEM MODIFY FRONTEND "192.168.15.51:9010" HOSTNAME "doris-s1";
+
+4 修改节点配置。
+
+修改节点配置。修改 FE 根目录中的conf/fe.conf文件，添加配置：enable_fqdn_mode = true。如果在刚停止的节点对应 fe.conf 添加了配置后无法正常启动，请在所有 fe.conf 中添加配置enable_fqdn_mode = true后再启动刚刚停止的 fe 节点
+
+
+
+5 启动节点。
+./start_fe.sh --daemon
+
+6 通过日志观察和 show frontends; 确保fe 启动成功
+
+tail -200f ../log/fe.log
+
+
+
+
+附：全量脚本如下（逐条拷贝到上面执行）
+
+ALTER SYSTEM MODIFY FRONTEND "192.168.15.51:9010" HOSTNAME "doris-s1";
+ALTER SYSTEM MODIFY FRONTEND "192.168.15.53:9010" HOSTNAME "doris-s3";
+ALTER SYSTEM MODIFY FRONTEND "192.168.15.61:9010" HOSTNAME "doris-s11";
+ALTER SYSTEM MODIFY FRONTEND "192.168.15.70:9010" HOSTNAME "doris-s20";
+ALTER SYSTEM MODIFY FRONTEND "192.168.15.62:9010" HOSTNAME "doris-s12";
+(注：192.168.15.62 需要放到最后执行，且需要在新的master 上执行！！！)
+
+
+
+6.3.将doris集群改造成FQDN模式（BE）
+1 BE 改造
+BE 节点启用 FQDN 只需要通过 MySQL 执行以下命令，不需要对 BE 执行重启操作。
+
+ALTER SYSTEM MODIFY BACKEND "<backend_ip>:<HeartbeatPort>" HOSTNAME "<be_hostname>"，如果你不知道端口 HeartbeatPort 是多少，请使用 show backends 命令来帮助寻找此端口;
+
+示例：
+ALTER SYSTEM MODIFY BACKEND "192.168.15.51:9050" HOSTNAME "doris-s1";
+
+
+
+附：全量脚本如下（拷贝到上面执行）(可考虑5条一执行)
+
+ALTER SYSTEM MODIFY BACKEND "192.168.15.51:9050" HOSTNAME "doris-s1";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.52:9050" HOSTNAME "doris-s2";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.53:9050" HOSTNAME "doris-s3";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.54:9050" HOSTNAME "doris-s4";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.55:9050" HOSTNAME "doris-s5";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.56:9050" HOSTNAME "doris-s6";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.57:9050" HOSTNAME "doris-s7";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.58:9050" HOSTNAME "doris-s8";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.59:9050" HOSTNAME "doris-s9";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.60:9050" HOSTNAME "doris-s10";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.61:9050" HOSTNAME "doris-s11";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.62:9050" HOSTNAME "doris-s12";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.63:9050" HOSTNAME "doris-s13";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.64:9050" HOSTNAME "doris-s14";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.65:9050" HOSTNAME "doris-s15";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.66:9050" HOSTNAME "doris-s16";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.67:9050" HOSTNAME "doris-s17";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.68:9050" HOSTNAME "doris-s18";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.69:9050" HOSTNAME "doris-s19";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.70:9050" HOSTNAME "doris-s20";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.71:9050" HOSTNAME "doris-s21";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.72:9050" HOSTNAME "doris-s22";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.73:9050" HOSTNAME "doris-s23";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.74:9050" HOSTNAME "doris-s24";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.75:9050" HOSTNAME "doris-s25";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.76:9050" HOSTNAME "doris-s26";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.77:9050" HOSTNAME "doris-s27";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.78:9050" HOSTNAME "doris-s28";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.79:9050" HOSTNAME "doris-s29";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.80:9050" HOSTNAME "doris-s30";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.81:9050" HOSTNAME "doris-s31";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.82:9050" HOSTNAME "doris-s32";
+ALTER SYSTEM MODIFY BACKEND "192.168.15.83:9050" HOSTNAME "doris-s33";
+
+
+3 观察整个集群数据读取写入是否正常
+
+-- 1. 创建测试数据库
+CREATE DATABASE IF NOT EXISTS test_doris_rw;
+USE test_doris_rw;
+
+-- 2. 创建测试表，使用 DUPLICATE KEY 模型
+CREATE TABLE IF NOT EXISTS test_table (
+id BIGINT,
+name VARCHAR(64),
+ts DATETIME
+)
+ENGINE=OLAP
+DUPLICATE KEY(id)
+DISTRIBUTED BY HASH(id) BUCKETS 50
+PROPERTIES (
+"replication_num" = "1"
+);
+
+-- 3. 插入测试数据（写操作, 可反复执行）
+INSERT INTO test_table VALUES
+(1, 'Alice', '2025-01-01 10:00:00'),
+(2, 'Bob', '2025-01-02 11:00:00');
+
+-- 4. 查询数据（读操作），验证读写正常
+SELECT id, name, ts FROM test_table WHERE id IN (1, 2);
+
+-- 5. 验证完成后，删除测试数据库（清理）
+DROP DATABASE IF EXISTS test_doris_rw;
+
+6.4.回退措施（无需执行）
+注：该操作存在风险。请在实验室支撑下完成
+
+1 FE 回退（需要先停止FE）
+A.配置回退
+cd /home/semptian/apache-doris-2.1.6-bin-x64/fe/conf
+rm -rf ./fe.conf
+cp fe.conf-bak0807
+
+B.元数据文件回退
+cd /home/semptian/apache-doris-2.1.6-bin-x64/fe
+rm -rf ./doris-meta
+cp -r ./doris-meta-bak0807 ./doris-meta
+
+C.重启FE
+优先启动 master
+./start_fe.sh --daemon
+
+其他子节点加入master
+./start_fe.sh --helper 192.168.15.62:9010 --daemon
+
+
+7.集群IP 变更（阶段2）
+7.1.停止服务，备份文件
+(1)关闭副本修复与均衡功能
+在mysql客户端连接doris，执行如下命令
+admin set frontend config("disable_balance" = "true");
+admin set frontend config("disable_colocate_balance" = "true");
+admin set frontend config("disable_tablet_scheduler" = "true");
+
+(2)批量分批停止所有 BE 节点（生产环境33台BE，建议5个一批批量停止）
+./bin/stop_be.sh
+
+(3)逐个停止所有 FE 节点（先停 FOLLOWER，最后停 MASTER）
+./bin/stop_fe.sh
+
+(4)确认所有进程已关闭
+ps -ef | grep doris
+
+(5)备份重要文件和数据
+cp -r fe/doris-meta fe/doris-meta-bak0807-fqdn
+cp fe/conf/fe.conf fe/conf/fe.conf-bak0807-fqdn
+
+(6)停止doris-manager和agnet
+manager 停止
+
+/home/semptian/doris-manager/webserver/bin
+./stop
+
+agent 停止（需要在所有doris 节点操作）
+
+cd /home/semptian/manager-agent/bin
+./stop.sh
+7.2.服务器搬迁
+搬迁doris服务器
+配置新ip
+并测试新ip间连通性
+7.3.修改FE&BE 配置文件
+修改 fe.conf & be.conf 的优先级网段（be和fe 都可使用此配置）
+priority_networks = 192.168.28.0/24
+
+
+
+7.4.修改hosts配置文件（涉及到doris 机器和大数据集群集群）
+注意：涉及到 doris 写入的机器均需要此配置（例：网管服务, 基础库，DAT 服务），同时该IP 为机房搬迁后IP
+
+1 进入所有fe/be节点，修改hosts配置：vim /etc/hosts，将旧IP调整为新IP
+2 调整所有相关服务的 /etc/hosts
+
+192.168.28.101 doris-s1
+192.168.28.102 doris-s2
+192.168.28.103 doris-s3
+192.168.28.104 doris-s4
+192.168.28.105 doris-s5
+192.168.28.106 doris-s6
+192.168.28.107 doris-s7
+192.168.28.108 doris-s8
+192.168.28.109 doris-s9
+192.168.28.110 doris-s10
+192.168.28.111 doris-s11
+192.168.28.112 doris-s12
+192.168.28.113 doris-s13
+192.168.28.114 doris-s14
+192.168.28.115 doris-s15
+192.168.28.116 doris-s16
+192.168.28.117 doris-s17
+192.168.28.118 doris-s18
+192.168.28.119 doris-s19
+192.168.28.120 doris-s20
+192.168.28.121 doris-s21
+192.168.28.122 doris-s22
+192.168.28.123 doris-s23
+192.168.28.124 doris-s24
+192.168.28.125 doris-s25
+192.168.28.126 doris-s26
+192.168.28.127 doris-s27
+192.168.28.128 doris-s28
+192.168.28.129 doris-s29
+192.168.28.130 doris-s30
+192.168.28.131 doris-s31
+192.168.28.132 doris-s32
+192.168.28.133 doris-s33
+7.5.启动 Doris 服务
+1. 先启动 FE 主节点
+./bin/start_fe.sh --daemon
+
+2. 启动其他 FE 节点
+./bin/start_fe.sh --helper 新FE_MASTER_IP:edit_log_port --daemon
+
+3. 批量分批启动所有 BE 节点（生产环境33台BE，建议5个一批批量启动）
+./bin/start_be.sh --daemon
+
+4. 检查集群状态
+
+或者通过mysql客户端连接doris后，执行如下命令
+show frontends;
+show backends;
+
+5开副本修复与均衡功能（需要确认所有BE 节点为可用状态）
+待集群恢复正常后，执行如下命令开启副本修复与均衡功能
+admin set frontend config("disable_balance" = "false");
+admin set frontend config("disable_colocate_balance" = "false");
+admin set frontend config("disable_tablet_scheduler" = "false");
+
+6.启动doris-manager和agnet
+
+webserver 启动（从基础环境中确认哪台机器部署了 webserver）
+
+cd /home/semptian/doris-manager/webserver/bin
+./start.sh
+
+agent 启动（注：需要删除 agent_id manager_id,  否则无法重新管控集群）
+
+cd /home/semptian/manager-agent/bin
+./stop.sh
+rm -rf agent_id manager_id
+./start.sh
+
+7.恢复自启动
+
+systemctl enable be-service
+systemctl enable fe-service
+7.6.Doris Manager 重新接管集群
+
+
+
+
+7.7.验证数据完整性
+验证读写可参考6.3 章节中的脚本
+
+-- 检查 fe 情况
+show frontends;
+
+-- 检查 BE 节点是否全部在线
+SHOW PROC '/backends';
+
+-- 检查 Tablet 副本是否健康
+SHOW PROC '/statistic';
+
+-- 抽样查询部分表数据
+SELECT * FROM your_table LIMIT 10;
+7.8.验证是否产生元数据损坏
+
+
+拷贝以下脚本并且执行（注意，脚本中的日期需要批量替换成实施日期）
+
+
+
+
+
+执行报错的可能就存在元数据问题， 参考 10.FAQ 元数据损坏解决
+8.风险说明
+a.方案分为两个阶段实施，阶段1和阶段2, 可采用元数据进行回退，若触发元数据回退后可能会导致某些表出现元数据问题，需要手动修复
+b.现场实际情况比实验室复杂的多，不排除会出现一些预期之外的问题
+
+9.变更后监控
+1.监控指标
+集群健康状态
+查询延迟
+数据副本完整性
+2.监控时长
+高频率监控：变更后24小时
+普通监控：变更后72小时
+10.FAQ
+(1)升级过程中如果遇到元数据损坏问题，参考如下案例修复
+
+
+
+# 找到出错的 tablet 信息
+show tablet 30885931;
+# 修复 tablet
+ADMIN SET TABLE deye_clue.tb_clue_target PARTITION VERSION PROPERTIES("partition_id" = "30885632", "visible_version" = "51368");
+
+
+
+参考资料：
+https://mp.weixin.qq.com/s/bslbn51o4oltV2ATnuABPA
+https://www.modb.pro/db/1945680981344661504
+
+(2)其他常见问题可以查看官方文档中故障诊断处理和常见问题
+常见运维问题 - Apache Doris
+
+
+(3)上述方法都没法解决，请联系实验室人员支撑
