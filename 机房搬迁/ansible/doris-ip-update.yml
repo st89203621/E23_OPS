@@ -70,13 +70,12 @@
         ./stop.sh
       ignore_errors: yes
 
-- name: "阶段1: 更新hosts文件（避免FE/BE混合节点重复操作）"
+- name: "阶段1: 更新hosts文件"
   hosts: doris_cluster
   gather_facts: yes
   tags: ["fqdn_setup"]
   vars:
     backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
-  run_once: false
 
   tasks:
     - name: 创建原始hosts文件备份
