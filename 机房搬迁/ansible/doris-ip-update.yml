@@ -95,13 +95,13 @@
   tasks:
     - name: 检查并强制停止自启动服务
       shell: |
+        # 只禁用服务，不停止正在运行的服务（避免影响Master）
         for service in doris-be.service doris-fe.service; do
           if systemctl list-unit-files | grep -q "^$service"; then
-            echo "停止并禁用服务: $service"
-            systemctl stop $service 2>/dev/null || true
+            echo "禁用服务: $service"
             systemctl disable $service 2>/dev/null || true
             systemctl mask $service 2>/dev/null || true
-            echo "服务 $service 已停止、禁用并屏蔽"
+            echo "服务 $service 已禁用并屏蔽"
           else
             echo "服务不存在，跳过: $service"
           fi
@@ -195,21 +195,19 @@
 
     - name: 1. 强制停止FE节点
       shell: |
-        cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
-        ./stop_fe.sh
+        # 停止systemd服务
+        systemctl stop doris-fe.service 2>/dev/null || true
 
-        # 等待几秒钟
-        sleep 3
+        # 尝试使用脚本停止
+        cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
+        ./stop_fe.sh 2>/dev/null || true
 
         # 强制杀死可能残留的进程
         pkill -f "DorisFE" || true
         pkill -f "fe.conf" || true
 
-        # 再次确认停止systemd服务（如果存在）
-        systemctl stop doris-fe.service 2>/dev/null || true
-        systemctl mask doris-fe.service 2>/dev/null || true
-
         echo "FE节点停止完成"
+      ignore_errors: yes
 
     - name: 1.5. 本地验证FE进程已停止
       shell: |
@@ -298,8 +296,16 @@
 
     - name: 停止Master节点 (触发重新选主)
       shell: |
+        # 停止systemd服务
+        systemctl stop doris-fe.service 2>/dev/null || true
+
+        # 尝试使用脚本停止
         cd {{ hostvars['localhost']['doris_home'] }}/fe/bin
-        ./stop_fe.sh
+        ./stop_fe.sh 2>/dev/null || true
+
+        # 强制杀死进程
+        pkill -f "DorisFE" || true
+      ignore_errors: yes
 
     - name: 等待Master选举完成
       pause:
@@ -379,10 +385,16 @@
   tasks:
     - name: 停止BE服务 (先停BE)
       shell: |
+        # 停止systemd服务
+        systemctl stop doris-be.service 2>/dev/null || true
+
+        # 尝试使用脚本停止
         cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/be/bin
-        ./stop_be.sh
+        ./stop_be.sh 2>/dev/null || true
+
+        # 强制杀死进程
+        pkill -f "DorisBE" || true
       ignore_errors: yes
-      when: inventory_hostname not in ['doris-s1', 'doris-s3', 'doris-s11', 'doris-s12', 'doris-s20'] or inventory_hostname in ['doris-s1', 'doris-s3', 'doris-s11', 'doris-s12', 'doris-s20']
 
     - name: 等待BE服务停止
       wait_for:
@@ -399,8 +411,15 @@
   tasks:
     - name: 停止Follower FE服务
       shell: |
+        # 停止systemd服务
+        systemctl stop doris-fe.service 2>/dev/null || true
+
+        # 尝试使用脚本停止
         cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/bin
-        ./stop_fe.sh
+        ./stop_fe.sh 2>/dev/null || true
+
+        # 强制杀死进程
+        pkill -f "DorisFE" || true
       ignore_errors: yes
 
     - name: 等待FE服务停止
@@ -417,8 +436,15 @@
   tasks:
     - name: 停止Master FE服务
       shell: |
+        # 停止systemd服务
+        systemctl stop doris-fe.service 2>/dev/null || true
+
+        # 尝试使用脚本停止
         cd {{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/bin
-        ./stop_fe.sh
+        ./stop_fe.sh 2>/dev/null || true
+
+        # 强制杀死进程
+        pkill -f "DorisFE" || true
       ignore_errors: yes
 
     - name: 等待Master FE服务停止
@@ -466,7 +492,7 @@
       lineinfile:
         path: "{{ doris_home | default('/home/semptian/apache-doris-2.1.6-bin-x64') }}/fe/conf/fe.conf"
         regexp: '^priority_networks\s*='
-        line: "priority_networks = {{ new_network }}.0/22"
+        line: "priority_networks = {{ new_network }}.0/24"
         backup: yes
       when: inventory_hostname in ['doris-s1', 'doris-s3', 'doris-s11', 'doris-s12', 'doris-s20']
 
