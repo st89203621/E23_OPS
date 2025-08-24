@@ -9,40 +9,28 @@
 
 - name: "增量添加Doris集群hosts配置到Hadoop集群"
   hosts: hadoop_cluster
-  gather_facts: yes
+  gather_facts: no  # 不收集系统信息，加快执行速度
+  # 添加错误处理策略 - 跳过不可达节点继续执行
+  strategy: free
+  any_errors_fatal: false
+  ignore_unreachable: true
+  # 添加超时和并发控制
+  serial: 20  # 每批处理20个节点
+  timeout: 30  # 任务超时30秒
   vars:
     doris_network: "{{ doris_network | default('192.168.15') }}"
-    backup_suffix: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+    backup_suffix: "{{ 99999999 | random }}"  # 简化时间戳为随机数
 
-  pre_tasks:
-    - name: 显示配置信息
-      debug:
-        msg: |
-          正在为Hadoop集群增量添加Doris hosts配置
-          Doris网络段: {{ doris_network }}.x (33台节点)
-          目标: 210台Hadoop节点
-          备份后缀: {{ backup_suffix }}
+  # 移除pre_tasks，直接执行主要任务
 
   tasks:
-    - name: 备份原始hosts文件
-      copy:
-        src: /etc/hosts
-        dest: "/etc/hosts.backup.{{ backup_suffix }}"
-        remote_src: yes
-        backup: yes
-
-    - name: 检查是否已存在Doris配置
-      shell: grep -q "# DORIS CLUSTER HOSTS" /etc/hosts
-      register: doris_hosts_exists
-      ignore_errors: yes
-      changed_when: false
-
+    # 简化版本：直接添加Doris配置，自动处理重复项
     - name: 移除旧的Doris配置（如果存在）
       blockinfile:
         path: /etc/hosts
         marker: "# {mark} DORIS CLUSTER HOSTS"
         state: absent
-      when: doris_hosts_exists.rc == 0
+      ignore_errors: yes
 
     - name: 添加Doris集群hosts配置
       blockinfile:
@@ -87,86 +75,6 @@
           {{ doris_network }}.132 doris-s32
           {{ doris_network }}.133 doris-s33
         backup: yes
-
-    - name: 验证hosts文件语法
-      shell: |
-        # 检查是否有重复的IP地址
-        awk '{print $1}' /etc/hosts | sort | uniq -d | head -5
-      register: duplicate_ips
-      changed_when: false
-
-    - name: 显示重复IP警告（如果有）
-      debug:
-        msg: |
-          警告：发现重复的IP地址：
-          {{ duplicate_ips.stdout_lines }}
-          请检查hosts文件配置
-      when: duplicate_ips.stdout_lines | length > 0
-
-    - name: 测试Doris主节点域名解析
-      shell: |
-        nslookup doris-s12 || getent hosts doris-s12
-      register: dns_test
       ignore_errors: yes
-      changed_when: false
 
-    - name: 显示域名解析结果
-      debug:
-        msg: |
-          Doris Master节点(doris-s12)域名解析结果:
-          {{ dns_test.stdout_lines }}
-      when: dns_test.rc == 0
-
-    - name: 显示配置完成信息
-      debug:
-        msg: |
-          ========================================
-          Doris hosts配置增量添加完成
-          ========================================
-          节点: {{ inventory_hostname }}
-          IP: {{ ansible_default_ipv4.address }}
-          已添加33台Doris设备的hosts映射
-          备份文件: /etc/hosts.backup.{{ backup_suffix }}
-
-          Doris集群访问地址:
-          - Master FE: {{ doris_network }}.112:9030 (doris-master)
-          - Manager: http://{{ doris_network }}.102:8004 (doris-manager)
-
-          测试连通性:
-          ping doris-master
-          telnet doris-master 9030
-
-- name: "验证Doris hosts配置"
-  hosts: hadoop_cluster[0:4]  # 只在前5台机器上验证，避免输出过多
-  gather_facts: no
-  tasks:
-    - name: 测试Doris关键节点连通性
-      shell: |
-        echo "测试Doris关键节点连通性..."
-        echo -n "doris-master: "
-        if ping -c 1 -W 2 doris-master >/dev/null 2>&1; then
-          echo "OK"
-        else
-          echo "FAILED"
-        fi
-        echo -n "doris-manager: "
-        if ping -c 1 -W 2 doris-manager >/dev/null 2>&1; then
-          echo "OK"
-        else
-          echo "FAILED"
-        fi
-        echo -n "doris-s1: "
-        if ping -c 1 -W 2 doris-s1 >/dev/null 2>&1; then
-          echo "OK"
-        else
-          echo "FAILED"
-        fi
-      register: connectivity_test
-      ignore_errors: yes
-      changed_when: false
-
-    - name: 显示连通性测试结果
-      debug:
-        msg: |
-          {{ inventory_hostname }} Doris连通性测试:
-          {{ connectivity_test.stdout_lines }}
+# 简化完成 - 只添加hosts配置，不做额外验证

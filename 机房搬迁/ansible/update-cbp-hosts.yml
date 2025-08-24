@@ -1,0 +1,121 @@
+---
+# CBP应用服务器集群hosts配置更新playbook
+# 用法: ansible-playbook -i inventory/app_server.ini update-cbp-hosts.yml
+
+- name: "更新CBP应用服务器集群hosts配置 - 旧IP改为新IP"
+  hosts: cbp_all_servers
+  gather_facts: yes
+  serial: 5  # 每批5个节点，避免同时影响太多服务器
+  vars:
+    # 新的hosts配置内容
+    cbp_hosts_content: |
+      # CBP应用服务器集群hosts配置 - 新IP段 192.168.28.x
+      # Nebula图数据库服务器
+      192.168.28.1 nebula-s1
+      192.168.28.2 nebula-s2
+      192.168.28.3 nebula-s3
+      # 数据库服务器
+      192.168.28.4 mysql-s1
+      192.168.28.5 oracle-s1
+      # 应用服务器
+      192.168.28.6 app-s2
+      192.168.28.7 app-s3
+      192.168.28.8 app-s4
+      192.168.28.9 app-s5
+      192.168.28.10 app-s6
+      192.168.28.11 app-s7
+      192.168.28.12 app-s8
+      192.168.28.13 app-s9
+      192.168.28.14 app-s10
+      192.168.28.15 app-s11
+      192.168.28.16 app-s12
+      192.168.28.17 app-s21
+      192.168.28.18 app-s22
+      # Redis缓存服务器
+      192.168.28.19 redis-s1
+      192.168.28.20 redis-s2
+
+  tasks:
+    - name: 显示当前处理的服务器信息
+      debug:
+        msg: "正在处理服务器: {{ inventory_hostname }} ({{ ansible_host }})"
+
+    - name: 检查服务器连通性
+      ping:
+      register: ping_result
+
+    - name: 备份原始hosts文件
+      copy:
+        src: /etc/hosts
+        dest: "/etc/hosts.backup.{{ ansible_date_time.epoch }}"
+        remote_src: yes
+        backup: yes
+      register: backup_result
+      ignore_errors: yes
+
+    - name: 显示备份结果
+      debug:
+        msg: "{{ inventory_hostname }}: hosts文件已备份到 {{ backup_result.dest | default('备份失败') }}"
+
+    - name: 移除旧的CBP配置
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} CBP CLUSTER HOSTS"
+        state: absent
+      ignore_errors: yes
+
+    - name: 添加新的CBP hosts配置
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} CBP CLUSTER HOSTS"
+        block: "{{ cbp_hosts_content }}"
+        backup: yes
+      register: hosts_update_result
+      ignore_errors: yes
+
+    - name: 验证配置是否生效
+      shell: |
+        echo "=== 验证CBP hosts配置 ==="
+        grep -A 25 "CBP CLUSTER HOSTS" /etc/hosts || echo "未找到CBP配置"
+        echo "=== 测试域名解析 ==="
+        nslookup nebula-s1 2>/dev/null || echo "nebula-s1解析失败"
+        nslookup mysql-s1 2>/dev/null || echo "mysql-s1解析失败"
+        nslookup redis-s1 2>/dev/null || echo "redis-s1解析失败"
+      register: verify_result
+      ignore_errors: yes
+
+    - name: 显示验证结果
+      debug:
+        msg: |
+          服务器: {{ inventory_hostname }}
+          配置状态: {{ 'SUCCESS' if hosts_update_result.changed else 'FAILED' }}
+          验证结果:
+          {{ verify_result.stdout | default('验证失败') }}
+
+    - name: 等待配置生效
+      pause:
+        seconds: 2
+
+- name: "CBP集群配置更新总结"
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: 显示完成信息
+      debug:
+        msg: |
+          ========================================
+          ✅ CBP应用服务器集群hosts配置更新完成!
+          ========================================
+          
+          后续验证步骤:
+          1. 检查特定节点配置:
+             ansible -i inventory/app_server.ini nebula-s1 -m shell -a 'tail -30 /etc/hosts'
+          
+          2. 测试服务器间连通性:
+             ansible -i inventory/app_server.ini mysql-s1 -m shell -a 'ping -c 2 redis-s1'
+          
+          3. 验证所有服务器配置:
+             ansible -i inventory/app_server.ini cbp_all_servers -m shell -a 'grep "CBP CLUSTER" /etc/hosts'
+          
+          4. 重启相关服务以使配置生效:
+             ansible -i inventory/app_server.ini cbp_all_servers -m service -a 'name=network state=restarted'

@@ -1,0 +1,77 @@
+---
+# 最简单的Doris集群hosts配置更新脚本
+# 用法: ansible-playbook -i inventory/doris_new.ini update-doris-hosts-simple.yml
+
+- name: "更新Doris集群hosts配置 - 旧IP改为新IP"
+  hosts: doris_cluster
+  gather_facts: no
+  serial: 10  # 每批10个节点
+  vars:
+    # 新的hosts配置内容
+    doris_hosts_content: |
+      # Doris集群hosts配置 - 新IP段 192.168.28.x
+      192.168.28.101 doris-s1
+      192.168.28.102 doris-s2
+      192.168.28.103 doris-s3
+      192.168.28.104 doris-s4
+      192.168.28.105 doris-s5
+      192.168.28.106 doris-s6
+      192.168.28.107 doris-s7
+      192.168.28.108 doris-s8
+      192.168.28.109 doris-s9
+      192.168.28.110 doris-s10
+      192.168.28.111 doris-s11
+      192.168.28.112 doris-s12
+      192.168.28.113 doris-s13
+      192.168.28.114 doris-s14
+      192.168.28.115 doris-s15
+      192.168.28.116 doris-s16
+      192.168.28.117 doris-s17
+      192.168.28.118 doris-s18
+      192.168.28.119 doris-s19
+      192.168.28.120 doris-s20
+      192.168.28.121 doris-s21
+      192.168.28.122 doris-s22
+      192.168.28.123 doris-s23
+      192.168.28.124 doris-s24
+      192.168.28.125 doris-s25
+      192.168.28.126 doris-s26
+      192.168.28.127 doris-s27
+      192.168.28.128 doris-s28
+      192.168.28.129 doris-s29
+      192.168.28.130 doris-s30
+      192.168.28.131 doris-s31
+      192.168.28.132 doris-s32
+      192.168.28.133 doris-s33
+
+  tasks:
+    - name: 备份原始hosts文件
+      copy:
+        src: /etc/hosts
+        dest: /etc/hosts.backup.{{ ansible_date_time.epoch }}
+        remote_src: yes
+      ignore_errors: yes
+
+    - name: 移除旧的Doris配置
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} DORIS CLUSTER HOSTS"
+        state: absent
+      ignore_errors: yes
+
+    - name: 添加新的Doris hosts配置
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} DORIS CLUSTER HOSTS"
+        block: "{{ doris_hosts_content }}"
+        backup: yes
+      ignore_errors: yes
+
+    - name: 验证配置是否生效
+      shell: grep "doris-s12" /etc/hosts
+      register: verify_result
+      ignore_errors: yes
+
+    - name: 显示验证结果
+      debug:
+        msg: "{{ inventory_hostname }}: {{ verify_result.stdout | default('配置可能失败') }}"

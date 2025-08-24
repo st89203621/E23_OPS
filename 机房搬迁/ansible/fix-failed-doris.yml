@@ -1,0 +1,143 @@
+---
+# 修复失败的Hadoop节点Doris配置
+# 用法: ansible-playbook -i inventory/hadoop.ini fix-failed-doris.yml --limit "bd-s101:bd-s110,bd-nm-101:bd-nm-110"
+
+- name: "修复失败的Hadoop节点Doris配置"
+  hosts: hadoop_cluster
+  gather_facts: yes
+  serial: 5  # 每批5个节点
+  vars:
+    # Doris配置内容
+    doris_hosts_content: |
+      # Doris集群hosts配置 - 新IP段 192.168.28.x
+      192.168.28.101 doris-s1
+      192.168.28.102 doris-s2
+      192.168.28.103 doris-s3
+      192.168.28.104 doris-s4
+      192.168.28.105 doris-s5
+      192.168.28.106 doris-s6
+      192.168.28.107 doris-s7
+      192.168.28.108 doris-s8
+      192.168.28.109 doris-s9
+      192.168.28.110 doris-s10
+      192.168.28.111 doris-s11
+      192.168.28.112 doris-s12
+      192.168.28.113 doris-s13
+      192.168.28.114 doris-s14
+      192.168.28.115 doris-s15
+      192.168.28.116 doris-s16
+      192.168.28.117 doris-s17
+      192.168.28.118 doris-s18
+      192.168.28.119 doris-s19
+      192.168.28.120 doris-s20
+      192.168.28.121 doris-s21
+      192.168.28.122 doris-s22
+      192.168.28.123 doris-s23
+      192.168.28.124 doris-s24
+      192.168.28.125 doris-s25
+      192.168.28.126 doris-s26
+      192.168.28.127 doris-s27
+      192.168.28.128 doris-s28
+      192.168.28.129 doris-s29
+      192.168.28.130 doris-s30
+      192.168.28.131 doris-s31
+      192.168.28.132 doris-s32
+      192.168.28.133 doris-s33
+
+  tasks:
+    - name: 显示当前处理的服务器
+      debug:
+        msg: "正在修复服务器: {{ inventory_hostname }} ({{ ansible_host }})"
+
+    - name: 检查服务器连通性
+      ping:
+      register: ping_result
+
+    - name: 检查当前hosts文件状态
+      shell: |
+        echo "=== 当前主机名 ==="
+        hostname
+        echo "=== 当前doris配置 ==="
+        grep -i doris /etc/hosts || echo "未找到doris配置"
+        echo "=== hosts文件大小 ==="
+        wc -l /etc/hosts
+      register: current_status
+      ignore_errors: yes
+
+    - name: 显示当前状态
+      debug:
+        msg: "{{ current_status.stdout_lines }}"
+
+    - name: 备份hosts文件
+      copy:
+        src: /etc/hosts
+        dest: "/etc/hosts.backup.{{ ansible_date_time.epoch }}"
+        remote_src: yes
+        backup: yes
+      register: backup_result
+      ignore_errors: yes
+
+    - name: 移除旧的Doris配置
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} DORIS CLUSTER HOSTS"
+        state: absent
+      ignore_errors: yes
+
+    - name: 添加新的Doris hosts配置
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} DORIS CLUSTER HOSTS"
+        block: "{{ doris_hosts_content }}"
+        backup: yes
+        create: yes
+      register: hosts_update_result
+
+    - name: 验证配置是否生效
+      shell: |
+        echo "=== 验证doris配置 ==="
+        grep -A 5 "DORIS CLUSTER HOSTS" /etc/hosts || echo "未找到配置标记"
+        echo "=== 统计doris条目 ==="
+        grep -c "doris-s" /etc/hosts || echo "0"
+        echo "=== 测试域名解析 ==="
+        nslookup doris-s1 2>/dev/null || echo "DNS解析测试完成"
+      register: verify_result
+      ignore_errors: yes
+
+    - name: 显示修复结果
+      debug:
+        msg: |
+          服务器: {{ inventory_hostname }}
+          备份状态: {{ 'SUCCESS' if backup_result.changed else 'FAILED' }}
+          配置状态: {{ 'SUCCESS' if hosts_update_result.changed else 'FAILED' }}
+          验证结果:
+          {{ verify_result.stdout_lines | join('\n') }}
+
+    - name: 记录修复状态
+      local_action:
+        module: lineinfile
+        path: "./doris_fix_log_{{ ansible_date_time.date }}.txt"
+        line: "{{ ansible_date_time.time }} - {{ inventory_hostname }}: {{ 'SUCCESS' if hosts_update_result.changed else 'FAILED' }}"
+        create: yes
+      ignore_errors: yes
+
+- name: "生成修复报告"
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: 显示修复完成信息
+      debug:
+        msg: |
+          ========================================
+          ✅ Doris配置修复完成!
+          ========================================
+          
+          验证命令:
+          1. 检查特定服务器:
+             ansible -i inventory/hadoop.ini bd-s101 -m shell -a 'grep doris /etc/hosts'
+          
+          2. 测试域名解析:
+             ansible -i inventory/hadoop.ini bd-s101:bd-s110 -m shell -a 'ping -c 1 doris-s1'
+          
+          3. 检查所有修复的服务器:
+             ansible -i inventory/hadoop.ini bd-s101:bd-s110,bd-nm-101:bd-nm-110 -m shell -a 'hostname && grep -c doris /etc/hosts'
