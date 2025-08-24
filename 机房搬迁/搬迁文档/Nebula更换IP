@@ -1,0 +1,51 @@
+1.在修改服务器IP前使用停止命令，将3台服务器上的图库所有进程都停止
+/usr/local/nebula/scripts/nebula.service stop all
+2.备份每个服务器上图库配置
+cd /usr/local/nebula/
+cp -r etc etc_bak_change_ip
+3.备份每个服务器上图库的数据目录,需要根据现场的实际数据目录进行备份，一般在数据盘中，需要备份的目录名称为nebula，可以通过查看/usr/local/nebula/etc中nebula-metad.conf和nebula-storaged.conf配置的数据目录为准
+4.修改完毕所有图库所在服务器物理IP地址
+5.修改每个服务器上meta、storage、graph的配置
+cd /usr/local/nebula/etc
+vim nebula-metad.conf
+vim nebula-storaged.conf
+vim nebula-graphd.conf
+需要修改以下ip为对应新ip，其中local_ip为本机所在ip
+--meta_server_addrs=new_ip1:9559,new_ip2:9559,new_ip3:9559
+--local_ip=new_ip1
+6.先启用每个服务器上metad 和 graphd 服务
+/usr/local/nebula/scripts/nebula.service start metad
+/usr/local/nebula/scripts/nebula.service start graphd
+7.查看每个服务器上metad和graphd服务状态
+/usr/local/nebula/scripts/nebula.service status all
+
+如果正常显示端口号代表正常
+8.通过命令找到 meta 的 leder 节点利用 leder 节点更换 hosts，需要修改以下ip为对应新ip
+/usr/local/nebula/bin/nebula-console -addr new_ip1 -port 9669 -u root -p nebula
+show meta leader
+
+9.利用 meta 的 http 服务替换 storaged 机器的 host 替换，以下为样例，需要注意不需要修改端口，from为旧IP，to为新IP，每组IP都需要执行一次
+curl -Gs "http://192.168.11.24:19559/replace?from=192.168.11.20:9779&to=192.168.11.23:9779"
+提示这个Replace Host in partition and zone successfully代表替换成功了。
+10.启动 storage
+/usr/local/nebula/scripts/nebula.service start storaged
+11.查看服务的服务是否正常启动
+/usr/local/nebula/scripts/nebula.service status all
+
+12.查看 hosts 及分区使用客户端进去，需要修改以下ip为对应新ip
+/usr/local/nebula/bin/nebula-console -addr new_ip1 -port 9669 -u root -p nebula
+show hosts;
+
+此处只能看到离线的旧IP
+13.如果没有看到新的服务器IP，添加，需要修改以下ip为对应新ip
+add hosts new_ip1:9779, new_ip2:9779,new_ip3:9779;
+show hosts;
+需要查看新ip状态是否online，并且leader count是否为新IP总计72个，可以通过show hosts多次观察结果，待结果为72个后，再执行下步
+14.删除原 IP,迁移成功，需要修改以下ip为旧IP
+drop hosts 192.168.11.20:9779, 192.168.11.21:9779,192.168.11.22:9779;
+使用命令使得leader count均衡
+use community;
+SUBMIT JOB BALANCE LEADER;
+show hosts;
+查看leader distribution是否均衡
+

@@ -1,0 +1,47 @@
+Ip对应关系
+迁移前老ip
+迁移后新ip
+
+192.168.13.78
+192.168.28.19
+
+192.168.13.79
+192.168.28.20
+
+
+备份数据（切ip前操作）
+登录192.168.13.78和192.168.13.79服务器，停止redis服务，通过ps -ef | grep redis找到对应的进程号，kill杀掉；
+找到数据存储目录，默认为/usr/data/redis，该配置在/home/semptian/redis-5.0.8/redis_700*.conf中可以找到，以redis_7001.conf为例
+       
+       如下图实验室环境所示，现场为7000-7002：
+       
+       appendonly.aof文件就是持久化之后的文件，每个redis_700*目录下都有一个
+       
+创建bak目录，将redis_700*目录备份到bak目录下，保险起见也可以拷贝一份到本地备份；
+
+创建新集群并导入数据（切ip后操作）
+登录192.168.28.19、192.168.28.20服务器，移除上面的集群文件，目录为/usr/data/redis/redis_700*/，每个节点目录都需要执行；
+
+初始化redis集群，进入这2台服务器的redis部署目录：/home/semptian/redis-5.0.8/，启动redis：
+./src/redis-server redis_7000.conf
+./src/redis-server redis_7001.conf
+./src/redis-server redis_7002.conf
+执行完之后ps -ef | grep redis查看是否启动成功；
+初始化集群：
+./src/redis-cli  --cluster create 192.168.28.19:7000 192.168.28.19:7001 192.168.28.19:7002 192.168.28.20:7000 192.168.28.20:7000 192.168.28.20:7000 --cluster-replicas 1
+验证是否创建成功，执行：
+./src/redis-cli -p 7001
+CLUSTER INFO
+显示节点数是6表示初始化成功
+
+恢复数据
+将目录下的redis_700*/appendonly.aof拷贝到新集群对应的redis_700*数据目录下；
+重启所有redis节点；
+ps -ef杀掉当前redis进程，使用以下命令重启；
+./src/redis-server redis_7000.conf
+./src/redis-server redis_7001.conf
+./src/redis-server redis_7002.conf
+验证数据
+./src/redis-cli -c -p 7002 -a pico-nf-8100
+scan 0
+
