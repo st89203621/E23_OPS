@@ -1,5 +1,5 @@
 SET hive.exec.dynamic.partition.mode=nonstrict;
-INSERT INTO test_dw_ods.ods_nf_other_log_store_tmp_083101 
+INSERT INTO test_dw_ods.ods_nf_other_log_store_tmp_083101
 SELECT  data_type,
   user_group,
   user_name,
@@ -34,38 +34,25 @@ SELECT  data_type,
   policy,
   site,
   trace_t,
-  nf_capture_time as capture_time,  -- 使用别名
+  capture_time,
   insert_time,
   data_id,
   uparea_id,
   capture_day,
   capture_hour
-FROM
-(
-        SELECT  nf.*,
-               radius.account,
-               nf.capture_time as nf_capture_time,      -- NF的capture_time
-               radius.capture_time as radius_capture_time, -- Radius的capture_time
-               ROW_NUMBER() OVER (PARTITION BY nf.strsrc_ip,nf.user_name,nf.capture_time ORDER BY nf.capture_time - radius.capture_time) AS rn
-        FROM
-        (
-                SELECT  *
-                FROM v64_deye_dw_ods.ods_nf_other_log_store
-                WHERE capture_day = '2025-08-30'
-                AND capture_hour BETWEEN '00' AND '23'
-                AND user_name <> strsrc_ip
-                AND uparea_id = '220214'
-        ) nf
-        JOIN
-        (
-                SELECT  internet_ip,
-                       user_name as account,
-                       capture_time
-                FROM v64_deye_dw_ods.ods_mobilenet_radius_mobilis_store
-                WHERE capture_day in ('2025-08-29', '2025-08-30')
-                AND action = 'Start' 
-        ) radius
-        ON nf.strsrc_ip = radius.internet_ip
-        WHERE nf.capture_time >= radius.capture_time
-) tmp
-WHERE rn = 1 and lower(user_name) <> lower(account);
+FROM v64_deye_dw_ods.ods_nf_other_log_store nf
+WHERE capture_day = '2025-08-30'
+AND capture_hour BETWEEN '00' AND '23'
+AND (user_name LIKE '213%' or user_name = strsrc_ip)
+AND uparea_id = '220214'
+AND NOT EXISTS (
+        select 1 from (
+        SELECT  internet_ip
+               ,cast(split(port_range,'-')[0] AS int) AS start_port
+               ,cast(split(port_range,'-')[1] AS int) AS end_port
+        FROM v64_deye_dw_ods.ods_mobilenet_radius_mobilis_store
+        WHERE capture_day = '2025-08-30'
+        AND action in ('Start', 'Stop')
+        GROUP BY internet_ip,port_range) radius
+        where nf.strsrc_ip = radius.internet_ip AND nf.src_port >= start_port AND nf.src_port <= end_port
+);
