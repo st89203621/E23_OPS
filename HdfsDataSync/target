@@ -1,0 +1,16 @@
+目标：同步A1机房的Hive数据到A2机房的Hive仓库
+使用hadoop distcp命令,例如:
+sudo -u hdfs hadoop distcp -update -m 10 -bandwidth 10000000 hdfs://192.168.16.11:8020/warehouse/tablespace/external/hive/v64_deye_dw_ods.db/ods_pr_email_store/capture_day=2025-10-01 hdfs://192.168.29.17:8020//warehouse/tablespace/external/hive/test_dw_ods.db/ods_pr_email_store/
+同步数据时间：
+系统刚开始6月1到9月30
+其它要求：
+提交分区批量
+提交分区，使用beeline方式
+按表一天天跑，所有的ods_store后缀的表
+封装一个带传参的模板（支持后继正式做归档）
+提交分区的sql类似
+alter table v64_deye_dw_ods.ods_nf_chat ADD PARTITION (capture_day='2024-01-01',capture_hour='10');
+
+服务器信息：
+该脚本部署到192.168.13.6上
+原始数据库为v64_deye_dw_ods
